@@ -77,7 +77,7 @@ df <- stats %>%
 	read.table(text = ., col.names = stats_headers) %>% 
 	dplyr::mutate(file = basename(file)) %>% 
 	dplyr::arrange(file) %>%
-	dplyr::select(-c(8:11))
+	dplyr::select(-c(8:10))
 
 
 
