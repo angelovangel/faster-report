@@ -54,10 +54,11 @@ source("bin/global.R")
 fastqdir <- normalizePath(params$fastq_dir)
 fastqfiles <- list.files(fastqdir, pattern = params$fastq_pattern, full.names = TRUE, recursive = T)
 names(fastqfiles) <- basename(fastqfiles)
+numcores <- ifelse(parallel::detectCores() > 2, parallel::detectCores(), 2)
 
 ```
 
-```{r faster_table}
+```{r faster_table, message=FALSE}
 
 stats_headers <- c("file", "num_seqs", "bases", "n_bases", 
 									 "min_len", "max_len", "avg_len", "Q1", "Q2", "Q3", 
@@ -69,7 +70,8 @@ stats_command <- function(x) {
           stdout = TRUE)
   }
 
-stats <- parallel::mcmapply(stats_command, fastqfiles)
+message(paste0('Running faster with ', numcores, ' cores...'))
+stats <- parallel::mcmapply(stats_command, fastqfiles, mc.cores = numcores)
 
 df <- stats %>%
 	read.table(text = ., col.names = stats_headers) %>% 
@@ -118,7 +120,7 @@ DT::datatable(df,
 
 ### Content, phred-score and k-mer metrics
 
-```{r table2, include=TRUE}
+```{r table2, include=TRUE, message=FALSE}
 # sparkline(0) # load dependencies
 # see https://omnipotent.net/jquery.sparkline/#s-docs
 # on how to include both x and y values in spark
@@ -267,6 +269,7 @@ if(params$rawdata) {
   if(!dir.exists("rawdata")) {dir.create("rawdata")}  
 }
 
+message(paste0('Running faster/fastkmers with ', numcores, ' cores...'))
 gc_density <- parallel::mcmapply(faster_gc, fastqfiles, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
 q_score_density <- parallel::mcmapply(faster_qscore, fastqfiles, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
 kmers_tbl_list <- parallel::mcmapply(fastkmers, fastqfiles, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
