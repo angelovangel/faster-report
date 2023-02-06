@@ -72,6 +72,7 @@ stats_command <- function(x) {
 
 message(paste0('Running faster with ', numcores, ' cores...'))
 stats <- parallel::mcmapply(stats_command, fastqfiles, mc.cores = numcores)
+#stats <- parallel::mcmapply(stats_command, fastqfiles)
 
 df <- stats %>%
 	read.table(text = ., col.names = stats_headers) %>% 

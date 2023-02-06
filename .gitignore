@@ -6,4 +6,5 @@
 *.html
 fastq-stats*
 .DS_Store
+rawdata
 
