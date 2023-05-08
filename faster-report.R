@@ -9,10 +9,7 @@
 
 
 library(optparse)
-library(here)
 require(rmarkdown)
-scriptdir <- here()
-print(scriptdir)
 
 option_list <- list(
   make_option(c('--path', '-p'), help = 'path to folder with fastq files [%default]', type = 'character', default = NULL),
