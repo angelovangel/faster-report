@@ -3,11 +3,16 @@
 #
 # this just renders the faster-report.Rmd file,
 # note that this uses system pandoc for rendering, not the Rstudio one
+# run this from within script folder
 #
 #============
 
+
 library(optparse)
+library(here)
 require(rmarkdown)
+scriptdir <- here()
+print(scriptdir)
 
 option_list <- list(
   make_option(c('--path', '-p'), help = 'path to folder with fastq files [%default]', type = 'character', default = NULL),
