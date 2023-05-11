@@ -60,7 +60,7 @@ numcores <- ifelse(parallel::detectCores() > 2, parallel::detectCores(), 2)
 
 ```{r faster_table, message=FALSE}
 
-stats_headers <- c("file", "num_seqs", "bases", "n_bases", 
+stats_headers <- c("file", "num_reads", "bases", "n_bases", 
 									 "min_len", "max_len", "avg_len", "Q1", "Q2", "Q3", 
 									 "N50", "Q20_percent", "Q30_percent")
 
@@ -88,7 +88,7 @@ write_xlsx(df, "fastq-stats.xlsx", format_headers = TRUE, col_names = TRUE)
 
 # get some summary data
 num_files <- length(fastqfiles)
-num_reads <- df %>% dplyr::summarise(seqs = sum(num_seqs)) %>% as.numeric()
+num_reads <- df %>% dplyr::summarise(seqs = sum(num_reads)) %>% as.numeric()
 num_reads_text <- system2("bin/siformat.sh", args = num_reads, stdout = T)
 num_bases <- df %>% dplyr::summarise(bases = sum(bases)) %>% as.numeric()
 num_bases_text <- system2("bin/siformat.sh", args = num_bases, stdout = T)
@@ -265,7 +265,7 @@ spark_content_phred <- function(content_tbl) {
 #
 # main calls to calculate data
 #
-# create rawdata dir if not exists before function calls, they write there
+# create rawdata dir if not exists before function calls, then write there
 if(params$rawdata) {
   if(!dir.exists("rawdata")) {dir.create("rawdata")}  
 }
