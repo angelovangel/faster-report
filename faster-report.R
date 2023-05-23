@@ -13,7 +13,7 @@ require(rmarkdown)
 
 option_list <- list(
   make_option(c('--path', '-p'), help = 'path to folder with fastq files [%default]', type = 'character', default = NULL),
-  make_option(c('--regex', '-r'), help = 'regex pattern to match fastq files [%default]', type = 'character', default = '*.fastq'),
+  make_option(c('--regex', '-r'), help = 'regex pattern to match fastq files [%default]', type = 'character', default = 'fast(q|q.gz)$'),
   make_option(c('--type', '-t'), help = "seq platform used, can be one of 'illumina', 'ont' or 'pacbio' [%default]", default = 'ont'),
   make_option(c('--save_raw', '-s'), help = 'save raw csv data used for plotting [%default]', type = 'logical', default = FALSE),
   make_option(c('--outfile','-o'), help = 'name of output report file [%default]', type = 'character', default = 'faster-report.html')

@@ -6,17 +6,17 @@
 faster_gc <- function(x, saveraw = FALSE) {
   require(dplyr)
   require(data.table)
-  
+
   samplename <- basename(tools::file_path_sans_ext(x, compression = T))
   density_obj <- system2("faster2", args = c("--gc", x), stdout = TRUE) %>%
     as.numeric() %>%
     # actually use density() here, not hist(). It returns a density list object with x and y, x is fixed from 1 to 100
     density(from = 0, to = 1, n = 100, na.rm = TRUE) # n is the number of equally spaced points at which the density is to be estimated.
-  
+
   if(isTRUE(saveraw)) {
     #if(!dir.exists("rawdata")) {dir.create("rawdata")}
-    data.table::fwrite(data.frame(x = density_obj$x, y = density_obj$y), 
-                       file = paste0("rawdata/", "faster_gc", "-", samplename, ".tsv"), 
+    data.table::fwrite(data.frame(x = density_obj$x, y = density_obj$y),
+                       file = paste0("rawdata/", "faster_gc", "-", samplename, ".tsv"),
                        sep = "\t")
   }
   # return
