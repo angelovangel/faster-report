@@ -8,3 +8,4 @@ fastq-stats*
 .DS_Store
 rawdata
 
+renv/.DS_Store
