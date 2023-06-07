@@ -279,19 +279,43 @@ if(params$rawdata) {
 
 message(paste0('Running faster/fastkmers with ', numcores, ' cores...'))
 
-gc_density <- parallel::mcmapply(faster_gc, fastqfiles, mc.preschedule = T, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
-q_score_density <- parallel::mcmapply(faster_qscore, fastqfiles, mc.preschedule = T, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
-kmers_tbl_list <- parallel::mcmapply(fastkmers, fastqfiles, mc.preschedule = T, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
+gc_density <- parallel::mcmapply(faster_gc, fastqfiles, 
+                                 mc.cores = numcores,
+                                 mc.preschedule = T, 
+                                 SIMPLIFY = FALSE, 
+                                 MoreArgs = list(saveraw = params$rawdata))
+q_score_density <- parallel::mcmapply(faster_qscore, fastqfiles, 
+                                      mc.cores = numcores,
+                                      mc.preschedule = T, 
+                                      SIMPLIFY = FALSE, 
+                                      MoreArgs = list(saveraw = params$rawdata))
+kmers_tbl_list <- parallel::mcmapply(fastkmers, fastqfiles, 
+                                     mc.cores = numcores,
+                                     mc.preschedule = T, 
+                                     SIMPLIFY = FALSE, 
+                                     MoreArgs = list(saveraw = params$rawdata))
 # do length only for ONT or PacBio
 if (params$sequencer != "Illumina") {
-  len_density <- parallel::mcmapply(faster_len, fastqfiles, mc.preschedule = T, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
+  len_density <- parallel::mcmapply(faster_len, fastqfiles, 
+                                    mc.cores = numcores,
+                                    mc.preschedule = T, 
+                                    SIMPLIFY = FALSE, 
+                                    MoreArgs = list(saveraw = params$rawdata))
 }
 
 # do duplevel only for Illumina
 if(params$sequencer == "Illumina") {
   
-  duplevel_tbl <- parallel::mcmapply(duplevel, fastqfiles, mc.preschedule = T, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
-  content_tbl <- parallel::mcmapply(content_percycle, fastqfiles, mc.preschedule = T, SIMPLIFY = FALSE, MoreArgs = list(saveraw = params$rawdata))
+  duplevel_tbl <- parallel::mcmapply(duplevel, fastqfiles, 
+                                     mc.cores = numcores, 
+                                     mc.preschedule = T, 
+                                     SIMPLIFY = FALSE, 
+                                     MoreArgs = list(saveraw = params$rawdata))
+  content_tbl <- parallel::mcmapply(content_percycle, fastqfiles, 
+                                    mc.cores = numcores,
+                                    mc.preschedule = T,
+                                    SIMPLIFY = FALSE, 
+                                    MoreArgs = list(saveraw = params$rawdata))
 }
 
 
