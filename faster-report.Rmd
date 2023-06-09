@@ -5,6 +5,7 @@ output:
   highlight: tango
   theme: cosmo
   toc: no
+  css: custom.css
 params:
  author:
   label: "Author"
