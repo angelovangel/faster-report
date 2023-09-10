@@ -77,8 +77,7 @@ message(paste0('Running faster with ', numcores, ' cores...'))
 stats <- parallel::mcmapply(stats_command, fastqfiles, mc.cores = numcores, mc.preschedule = T)
 #stats <- parallel::mcmapply(stats_command, fastqfiles)
 
-df <- stats %>%
-	read.table(text = ., col.names = stats_headers) %>% 
+df <- utils::read.table(text = stats, col.names = stats_headers) %>% 
 	dplyr::mutate(file = basename(file)) %>% 
 	dplyr::arrange(file) %>%
 	dplyr::select(-c(8:10))
@@ -86,8 +85,8 @@ df <- stats %>%
 
 
 # these files are 
-write.csv(df, file = "fastq-stats.csv", row.names = FALSE)
-write_xlsx(df, "fastq-stats.xlsx", format_headers = TRUE, col_names = TRUE)
+#write.csv(df, file = "fastq-stats.csv", row.names = FALSE)
+#write_xlsx(df, "fastq-stats.xlsx", format_headers = TRUE, col_names = TRUE)
 
 # get some summary data
 num_files <- length(fastqfiles)

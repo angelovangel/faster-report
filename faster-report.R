@@ -3,13 +3,20 @@
 #
 # this just renders the faster-report.Rmd file,
 # note that this uses system pandoc for rendering, not the Rstudio one
-# run this from within script folder
+# 
 #
 #============
-
-
-library(optparse)
+require(optparse)
+require(renv)
 require(rmarkdown)
+require(funr)
+
+scriptpath  <-  dirname(funr::sys.script())
+calldir <- getwd()
+
+setwd(scriptpath)
+renv::load()
+
 
 option_list <- list(
   make_option(c('--path', '-p'), help = 'path to folder with fastq files [%default]', type = 'character', default = NULL),
@@ -34,11 +41,11 @@ if (opts$type == 'illumina') {
 
 # render the rmarkdown, using fastq-report.Rmd as template
 rmarkdown::render(input = "faster-report.Rmd",
-                  output_file = opts$outfile,
-                  output_dir = getwd(), # important when knitting in docker
+                  output_file = file.path(calldir, opts$outfile),
+                  output_dir = calldir, # important when knitting in docker
                   knit_root_dir = getwd(), # important when knitting in docker
                   params = list(
-                    fastq_dir = opts$path,
+                    fastq_dir = file.path(calldir, opts$path),
                     fastq_pattern = opts$regex,
                     sequencer = opts$type,
                     rawdata = opts$save_raw
