@@ -6,16 +6,17 @@
 # 
 #
 #============
+calldir <- getwd()
+
+setwd(scriptpath)
+renv::load()
+
 require(optparse)
 require(renv)
 require(rmarkdown)
 require(funr)
 
 scriptpath  <-  dirname(funr::sys.script())
-calldir <- getwd()
-
-setwd(scriptpath)
-renv::load()
 
 
 option_list <- list(
