@@ -7,6 +7,7 @@
 #
 #============
 require(funr)
+require(renv)
 
 calldir <- getwd()
 scriptpath  <-  dirname(funr::sys.script())
@@ -14,7 +15,6 @@ setwd(scriptpath)
 renv::load()
 
 require(optparse)
-require(renv)
 require(rmarkdown)
 
 
