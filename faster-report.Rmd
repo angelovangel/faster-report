@@ -67,7 +67,7 @@ numcores <- ifelse(parallel::detectCores() > 2, parallel::detectCores(), 2)
 
 ```
 
-```{r faster_table, message=FALSE}
+```{r faster_table, echo = F, warning = F, message = F}
 
 stats_headers <- c("file", "num_reads", "bases", "n_bases", 
 									 "min_len", "max_len", "avg_len", "Q1", "Q2", "Q3", 
@@ -81,6 +81,7 @@ stats_command <- function(x) {
 
 message(paste0('Running faster with ', numcores, ' cores...'))
 stats <- parallel::mcmapply(stats_command, fastqfiles, mc.cores = numcores, mc.preschedule = T)
+
 #stats <- parallel::mcmapply(stats_command, fastqfiles)
 
 df <- utils::read.table(text = stats, col.names = stats_headers) %>% 

@@ -46,6 +46,7 @@ rmarkdown::render(input = "faster-report.Rmd",
                   output_file = file.path(calldir, opts$outfile),
                   output_dir = calldir, # important when knitting in docker
                   knit_root_dir = scriptpath, # important when knitting in docker
+                  #envir = new.env(),
                   params = list(
                     fastq_dir = opts$path,
                     fastq_pattern = opts$regex,
