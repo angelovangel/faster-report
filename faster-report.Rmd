@@ -57,6 +57,11 @@ parallelMap::parallelSource("bin/global.R")
 
 fastqdir <- normalizePath(params$fastq_dir)
 fastqfiles <- list.files(fastqdir, pattern = params$fastq_pattern, full.names = TRUE, recursive = T)
+
+if(length(fastqfiles) < 1) { 
+  stop(paste0('No fastq files found: ', fastqfiles))
+  }
+
 names(fastqfiles) <- basename(fastqfiles)
 numcores <- ifelse(parallel::detectCores() > 2, parallel::detectCores(), 2)
 
