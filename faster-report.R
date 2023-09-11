@@ -19,8 +19,6 @@ require(rmarkdown)
 
 
 
-
-
 option_list <- list(
   make_option(c('--path', '-p'), help = 'path to folder with fastq files [%default]', type = 'character', default = NULL),
   make_option(c('--regex', '-r'), help = 'regex pattern to match fastq files [%default]', type = 'character', default = 'fast(q|q.gz)$'),
@@ -36,6 +34,7 @@ if (is.null(opts$path)){
   print_help(opt_parser)
   stop("At least a path to a folder with fastq files is required (use option '-p path/to/folder')", call.=FALSE)
 }
+print(opts$path)
 
 # change to match parameter. used in Rmd
 if (opts$type == 'illumina') {
@@ -46,9 +45,9 @@ if (opts$type == 'illumina') {
 rmarkdown::render(input = "faster-report.Rmd",
                   output_file = file.path(calldir, opts$outfile),
                   output_dir = calldir, # important when knitting in docker
-                  knit_root_dir = getwd(), # important when knitting in docker
+                  knit_root_dir = scriptpath, # important when knitting in docker
                   params = list(
-                    fastq_dir = file.path(calldir, opts$path),
+                    fastq_dir = opts$path,
                     fastq_pattern = opts$regex,
                     sequencer = opts$type,
                     rawdata = opts$save_raw
