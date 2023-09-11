@@ -30,7 +30,7 @@ params:
    
 ---
 
-Report generated on `r Sys.time()`. All fastq data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.
+Report generated on `r format.Date(Sys.time())`. All fastq data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.
 
 
 ```{r setup, include=FALSE}
