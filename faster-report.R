@@ -10,8 +10,8 @@ require(funr)
 require(renv)
 
 calldir <- getwd()
-scriptpath  <-  dirname(funr::sys.script())
-setwd(scriptpath)
+scriptdir  <-  dirname(funr::sys.script())
+setwd(scriptdir)
 renv::load()
 
 require(optparse)
@@ -34,7 +34,16 @@ if (is.null(opts$path)){
   print_help(opt_parser)
   stop("At least a path to a folder with fastq files is required (use option '-p path/to/folder')", call.=FALSE)
 }
-print(opts$path)
+
+# complicated case to parse correct fastq path when calling and script directories are not the same
+# check if abs or relative path was provided
+if (R.utils::isAbsolutePath(opts$path)) {
+  fastqpath <- opts$path
+} else {
+  fastqpath <- normalizePath(file.path(calldir, opts$path))
+}
+
+print(fastqpath)
 
 # change to match parameter. used in Rmd
 if (opts$type == 'illumina') {
@@ -45,10 +54,10 @@ if (opts$type == 'illumina') {
 rmarkdown::render(input = "faster-report.Rmd",
                   output_file = opts$outfile,
                   output_dir = calldir, # important when knitting in docker
-                  knit_root_dir = scriptpath, # important when knitting in docker
+                  knit_root_dir = scriptdir, # important when knitting in docker
                   #envir = new.env(),
                   params = list(
-                    fastq_dir = opts$path,
+                    fastq_dir = fastqpath,
                     fastq_pattern = opts$regex,
                     sequencer = opts$type,
                     rawdata = opts$save_raw
