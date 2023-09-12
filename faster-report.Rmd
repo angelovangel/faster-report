@@ -1,5 +1,7 @@
 ---
-title: "FASTQ metrics"
+title: |
+  <img style="float: right;" width="150;" src="www/bcl2.png">  FASTQ report    
+  
 output:
  html_document:
   highlight: tango
@@ -9,7 +11,7 @@ output:
 params:
  author:
   label: "Author"
-  value: "BCL"
+  value: "BCL (KAUST Core Laboratories)"
   input: text
  fastq_dir:
   label: "Path to folder with fastq files (required, absolute path or relative to current folder)"
@@ -112,6 +114,7 @@ This is **`r params$sequencer`** sequencing data. The report contains
 **`r num_reads_text`** reads    
 **`r num_bases_text`** bases  
 </blockquote>
+
 ```{r table1, include=TRUE}
 
 
