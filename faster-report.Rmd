@@ -9,7 +9,7 @@ output:
 params:
  author:
   label: "Author"
-  value: ""
+  value: "BCL"
   input: text
  fastq_dir:
   label: "Path to folder with fastq files (required, absolute path or relative to current folder)"
@@ -30,7 +30,7 @@ params:
    
 ---
 
-Report generated on `r format.Date(Sys.time())`. All fastq data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.
+Report generated on `r format.Date(Sys.time())` at `r params$author`. All fastq data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.
 
 
 ```{r setup, include=FALSE}
