@@ -29,7 +29,13 @@ params:
   label: "Save raw analysis data"
   value: FALSE
   input: checkbox
-   
+ subsample:
+   label: "Fraction to subsample reads for kmers calculation"
+   input: numeric
+   min: 0.1
+   max: 1
+   step: 0.1
+   value: 1
 ---
 
 Generated at <span class="badge">`r params$author`</span> <span class="badge">`r format.Date(Sys.time())` </span>   
@@ -72,7 +78,7 @@ numcores <- ifelse(parallel::detectCores() > 2, parallel::detectCores(), 2)
 
 ```{r faster_table, echo = F, warning = F, message = F}
 
-stats_headers <- c("filename", "num_reads", "bases", "n_bases", 
+stats_headers <- c("file", "num_reads", "bases", "n_bases", 
 									 "min_len", "max_len", "avg_len", "Q1", "Q2", "Q3", 
 									 "N50", "Q20_percent", "Q30_percent")
 
@@ -83,15 +89,35 @@ stats_command <- function(x) {
   }
 
 message(paste0('Running faster with ', numcores, ' cores...'))
+# stats is run with full files
 stats <- parallel::mcmapply(stats_command, fastqfiles, mc.cores = numcores, mc.preschedule = T)
+stats_df <- utils::read.table(text = stats, col.names = stats_headers)
+
 
 #stats <- parallel::mcmapply(stats_command, fastqfiles)
 
-df <- utils::read.table(text = stats, col.names = stats_headers) %>% 
-	dplyr::mutate(filename = basename(filename)) %>% 
-	dplyr::arrange(filename) %>%
+df <- stats_df %>% 
+	dplyr::mutate(file = basename(file)) %>% 
+	dplyr::arrange(file) %>%
 	dplyr::select(-c(8:10))
 
+# subsample fastqfiles if they are too big, use subsampled for table2 only
+# 
+subs_command <- function(x) {
+    system2(command = "faster", 
+          args = c("--sample", params$subsample, x),
+          stdout = paste0('subsampled/', basename(x))
+          )
+  }
+if (params$subsample < 1) {
+  if (! dir.exists('subsampled') ) {
+  dir.create('subsampled')
+  }
+  parallel::mcmapply(subs_command, fastqfiles, mc.cores = numcores, mc.preschedule = T)
+  # from here on here fastqfiles are the subsampled ones
+  fastqfiles <- list.files('subsampled', pattern = params$fastq_pattern, full.names = TRUE, recursive = F)
+  names(fastqfiles) <- basename(fastqfiles)
+}
 
 
 # these files are 
@@ -363,4 +389,9 @@ gc_df %>%
 
 ```
 
+```{r cleanup, include = FALSE}
+if (dir.exists('subsampled')) {
+  unlink('subsampled', recursive = T, force = T)
+}
+```
 

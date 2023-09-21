@@ -24,6 +24,7 @@ option_list <- list(
   make_option(c('--regex', '-r'), help = 'regex pattern to match fastq files [%default]', type = 'character', default = 'fast(q|q.gz)$'),
   make_option(c('--type', '-t'), help = "seq platform used, can be one of 'illumina', 'ont' or 'pacbio' [%default]", default = 'ont'),
   make_option(c('--save_raw', '-s'), help = 'save raw csv data used for plotting [%default]', type = 'logical', default = FALSE),
+  make_option(c('--subsample', '-u'), help = 'subsample reads for kmers calculation [%default]', type = 'double', default = 1.0),
   make_option(c('--outfile','-o'), help = 'name of output report file [%default]', type = 'character', default = 'faster-report.html')
   )
 
@@ -45,9 +46,13 @@ if (R.utils::isAbsolutePath(opts$path)) {
 
 print(fastqpath)
 
-# change to match parameter. used in Rmd
+# change to match parameter used in Rmd
 if (opts$type == 'illumina') {
   opts$type <- 'Illumina'
+} else if (opts$type == 'ont') {
+  opts$type <- 'Nanopore'
+} else if (opts$type == 'pacbio') {
+  opts$type <- 'PacBio'
 }
 
 # render the rmarkdown, using fastq-report.Rmd as template
@@ -60,6 +65,7 @@ rmarkdown::render(input = "faster-report.Rmd",
                     fastq_dir = fastqpath,
                     fastq_pattern = opts$regex,
                     sequencer = opts$type,
-                    rawdata = opts$save_raw
+                    rawdata = opts$save_raw,
+                    subsample = opts$subsample
                   )
 )
