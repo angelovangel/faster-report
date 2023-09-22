@@ -47,6 +47,12 @@ knitr::opts_chunk$set(include = FALSE,
                       echo = FALSE, 
                       warning = FALSE, 
                       cache = FALSE)
+#=== System requirements ===============================#
+
+# parallel, faster, fastkmers                           #
+
+#=== System requirements ===============================#
+
 #require(seqTools)
 require(stringr)
 require(writexl)
@@ -90,7 +96,8 @@ stats_command <- function(x) {
 
 message(paste0('Running faster with ', numcores, ' cores...'))
 # stats is run with full files
-stats <- parallel::mcmapply(stats_command, fastqfiles, mc.cores = numcores, mc.preschedule = T)
+# stats <- mapply(stats_command, fastqfiles)
+stats <- parallel::mcmapply(stats_command, fastqfiles, mc.cores = numcores) #mc.preschedule = T)
 stats_df <- utils::read.table(text = stats, col.names = stats_headers)
 
 
