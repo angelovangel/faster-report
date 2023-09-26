@@ -8,7 +8,7 @@ faster_gc <- function(x, saveraw = FALSE) {
   require(data.table)
 
   samplename <- basename(tools::file_path_sans_ext(x, compression = T))
-  density_obj <- system2("faster", args = c("--gc", x), stdout = TRUE) %>%
+  density_obj <- system2("faster2", args = c("--gc", x), stdout = TRUE) %>%
     as.numeric() %>%
     # actually use density() here, not hist(). It returns a density list object with x and y, x is fixed from 1 to 100
     density(from = 0, to = 1, n = 100, na.rm = TRUE) # n is the number of equally spaced points at which the density is to be estimated.
@@ -29,7 +29,7 @@ faster_qscore <- function(x, saveraw = FALSE) {
   require(data.table)
   
   samplename <- basename(tools::file_path_sans_ext(x, compression = T))
-  density_obj <- system2("faster", args = c("--qscore", x), stdout = TRUE) %>%
+  density_obj <- system2("faster2", args = c("--qual", x), stdout = TRUE) %>%
     as.numeric() %>%
     # actually use density() here, not hist(). It returns a density list object with x and y, x is fixed from 1 to 50
     density(from = 1, to = 60, n = 60, na.rm = TRUE) # n is the number of equally spaced points at which the density is to be estimated.
@@ -48,7 +48,7 @@ faster_len <- function(x, saveraw = FALSE) {
   require(data.table)
   samplename <- basename(tools::file_path_sans_ext(x, compression = T))
   
-  density_obj <- system2("faster", args = c("--len", x), stdout = TRUE) %>%
+  density_obj <- system2("faster2", args = c("--len", x), stdout = TRUE) %>%
     as.numeric() %>%
     log10() %>%
     density(from = 2, to = 5, n = 100, na.rm = TRUE)

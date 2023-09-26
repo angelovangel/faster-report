@@ -49,7 +49,7 @@ knitr::opts_chunk$set(include = FALSE,
                       cache = FALSE)
 #=== System requirements ===============================#
 
-# parallel, faster, fastkmers                           #
+# faster, faster2, fastkmers                           #
 
 #=== System requirements ===============================#
 
