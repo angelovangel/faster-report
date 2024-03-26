@@ -25,6 +25,14 @@ params:
   choices: ["Illumina", "Nanopore", "PacBio"]
   value: "Nanopore"
   input: select
+ flowcell:
+  label: "Flow cell ID"
+  value: ""
+  input: text
+ rundate:
+  label: "Run date"
+  value: NA
+  input: date    
  rawdata:
   label: "Save raw analysis data"
   value: FALSE
@@ -38,7 +46,9 @@ params:
    value: 1
 ---
 
-Generated at <span class="badge">`r params$author`</span> <span class="badge">`r format.Date(Sys.time())` </span>   
+Generated at `r params$author` on `r format.Date(Sys.time())`.    
+Run date: <span class="badge"> `r params$rundate` </span>    
+Flow cell ID: <span class="badge"> `r params$flowcell` </span>   
 All fastq data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.
 
 
@@ -103,13 +113,14 @@ message(paste0('Running faster with ', numcores, ' cores...'))
 # stats <- mapply(stats_command, fastqfiles)
 stats <- parallel::mcmapply(stats_command, fastqfiles, mc.cores = numcores) #mc.preschedule = T)
 stats_df <- utils::read.table(text = stats, col.names = stats_headers)
-if (params$sequencer == 'Nanopore') {
-  nduplex <- parallel::mcmapply(nduplex_command, fastqfiles, mc.cores = numcores)
-  dfcols <- c("file", "num_reads", "duplex_reads", "bases", "n_bases", "min_len", "max_len", "avg_len", "N50", "Q20_percent", "Q30_percent")
-} else {
-  nduplex <- rep(NA, length(fastqfiles))
-  dfcols <- c("file", "num_reads", "bases", "n_bases", "min_len", "max_len", "avg_len", "N50", "Q20_percent", "Q30_percent")
-}
+
+#if (params$sequencer == 'Nanopore') {
+nduplex <- parallel::mcmapply(nduplex_command, fastqfiles, mc.cores = numcores)
+dfcols <- c("file", "num_reads", "duplex_reads", "bases", "n_bases", "min_len", "max_len", "avg_len", "N50", "Q20_percent", "Q30_percent")
+# } else {
+#   nduplex <- rep(NA, length(fastqfiles))
+#   dfcols <- c("file", "num_reads", "bases", "n_bases", "min_len", "max_len", "avg_len", "N50", "Q20_percent", "Q30_percent")
+# }
 
 
 #stats <- parallel::mcmapply(stats_command, fastqfiles)
