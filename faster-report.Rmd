@@ -187,8 +187,8 @@ DT::datatable(df,
 												 ), 
 					rownames = FALSE, 
 					class = 'hover row-border') %>%
-	DT::formatRound(2:7, 0) %>%
-	DT::formatRound(8:9, 2)
+	DT::formatRound(2:9, 0) %>%
+	DT::formatRound(10:11, 2)
 
 ```
 
