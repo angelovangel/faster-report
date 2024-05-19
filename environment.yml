@@ -1,0 +1,20 @@
+name: faster-report
+
+dependencies:
+  - r-rmarkdown
+  - r-funr
+  - r-r.utils
+  - r-stringr
+  - r-writexl
+  - r-knitr
+  - r-dt
+  - r-kableExtra
+  - r-dplyr
+  #- r-sparkline
+  - r-htmlwidgets
+  - r-jsonlite
+  #- r-parallel
+  - r-parallelmap
+  - r-optparse
+  - r-rmarkdown
+  - r-funr

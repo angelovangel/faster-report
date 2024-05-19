@@ -74,7 +74,7 @@ require(sparkline)
 require(htmlwidgets)
 require(jsonlite)
 require(parallel) # may be ships with R, so not in the environment.yml
-#require(RcppRoll)
+require(parallelMap)
 
 # important to use the sourced functions in parallel effectively
 # https://stackoverflow.com/questions/16028671/why-does-sourcing-a-script-within-rs-parallel-functions-fail

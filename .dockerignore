@@ -1,0 +1,6 @@
+renv*
+.gitignore
+.Renviron
+.Rprofile
+faster-report.html
+fastq-stats*

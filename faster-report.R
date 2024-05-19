@@ -7,15 +7,16 @@
 #
 #============
 require(funr)
-require(renv)
+require(optparse)
+require(rmarkdown)
+#require(renv)
 
 calldir <- getwd()
 scriptdir  <-  dirname(funr::sys.script())
 setwd(scriptdir)
-renv::load()
+#renv::load()
 
-require(optparse)
-require(rmarkdown)
+
 
 
 
@@ -46,7 +47,8 @@ if (R.utils::isAbsolutePath(opts$path)) {
   fastqpath <- normalizePath(file.path(calldir, opts$path))
 }
 
-print(fastqpath)
+print(paste0("call dir: ", calldir))
+print(paste0("fastq path: ", fastqpath))
 
 # change to match parameter used in Rmd
 if (opts$type == 'illumina') {
