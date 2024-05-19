@@ -16,10 +16,6 @@ scriptdir  <-  dirname(funr::sys.script())
 setwd(scriptdir)
 #renv::load()
 
-
-
-
-
 option_list <- list(
   make_option(c('--path', '-p'), help = 'path to folder with fastq files [%default]', type = 'character', default = NULL),
   make_option(c('--regex', '-r'), help = 'regex pattern to match fastq files [%default]', type = 'character', default = 'fast(q|q.gz)$'),
