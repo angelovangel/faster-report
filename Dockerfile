@@ -39,7 +39,7 @@ RUN install2.r \
 
 COPY . /temp
 
-WORKDIR /temp
-ENTRYPOINT [ "./faster-report.R" ]
+#WORKDIR /temp
+ENTRYPOINT [ "/temp/faster-report.R" ]
 
-# docker run -it --mount type=bind,src="$HOME",target="$HOME" aangeloo/faster-report -p ~/Documents/test-fastq/
+# docker run -it --mount type=bind,src="$HOME",target="$HOME" -w ~/Desktop/testfastq aangeloo/faster-report -p ~/Desktop/testfastq/ont
