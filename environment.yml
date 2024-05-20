@@ -10,7 +10,7 @@ dependencies:
   - r-dt
   - r-kableExtra
   - r-dplyr
-  - r-sparkline
+  - r::r-sparkline
   - r-htmlwidgets
   - r-jsonlite
   #- r-parallel

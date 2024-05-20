@@ -24,7 +24,7 @@ done
 
 # workdir to be the parent of the fastq dir, this script is all about this
 
-docker run -it \
+docker run \
     --mount type=bind,src="$HOME",target="$HOME" \
     -w $(dirname $path) \
     aangeloo/faster-report \
