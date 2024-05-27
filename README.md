@@ -8,7 +8,8 @@ All major platforms are supported - Illumina, PacBio, ONT. The reports are also 
 ## Running
 Two of the many ways to run the code:
 
-- git clone the repo, use conda to create an environment using the `environment.yml` file. After that, execute `faster-report.R`
+- git clone the repo, use conda to create an environment using the `environment.yml` file. For example, 
+` mamba env update -n base --file environment.yml `. After that, execute `faster-report.R`
 - as above, but open `faster-report.Rmd` in Rstudio and select *Knit with Parameters*
 - use docker, with the helper script `faster-report-docker.sh`
 
