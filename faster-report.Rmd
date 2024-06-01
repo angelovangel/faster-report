@@ -32,7 +32,11 @@ params:
  rundate:
   label: "Run date"
   value: NA
-  input: date    
+  input: date
+ user:
+  label: "User"
+  value: NA
+  input: text    
  rawdata:
   label: "Save raw analysis data"
   value: FALSE
@@ -49,7 +53,8 @@ params:
 Generated at `r params$author` on `r format.Date(Sys.time())`.    
 Run date: <span class="badge"> `r params$rundate` </span>    
 Platform: <span class="badge"> `r params$sequencer` </span>   
-Flow cell ID: <span class="badge"> `r params$flowcell` </span>   
+Flow cell ID: <span class="badge"> `r params$flowcell` </span>
+User: <span class="badge"> `r params$user` </span> 
 All fastq data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.
 
 

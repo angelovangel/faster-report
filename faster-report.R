@@ -3,7 +3,7 @@
 #
 # this just renders the faster-report.Rmd file,
 # note that this uses system pandoc for rendering, not the Rstudio one
-# 
+#  # nolint: trailing_whitespace_linter.
 #
 #============
 require(funr)
@@ -22,8 +22,9 @@ option_list <- list(
   make_option(c('--type', '-t'), help = "seq platform used, can be one of 'illumina', 'ont' or 'pacbio' [%default]", default = 'ont'),
   make_option(c('--rundate', '-d'), help = 'Run date', type = 'character', default = NULL),
   make_option(c('--flowcell', '-f'), help = 'Flow cell ID', type = 'character', default = NULL),
+  make_option(c('--user', '-u'), help = 'User', type = 'character', default = NULL),
   make_option(c('--save_raw', '-s'), help = 'save raw csv data used for plotting [%default]', type = 'logical', default = FALSE),
-  make_option(c('--subsample', '-u'), help = 'subsample reads for kmers calculation [%default]', type = 'double', default = 1.0),
+  make_option(c('--subsample', '-x'), help = 'subsample reads for kmers calculation [%default]', type = 'double', default = 1.0),
   make_option(c('--outfile','-o'), help = 'name of output report file [%default]', type = 'character', default = 'faster-report.html')
   )
 
@@ -67,6 +68,7 @@ rmarkdown::render(input = "faster-report.Rmd",
                     sequencer = opts$type,
                     rundate = opts$rundate,
                     flowcell = opts$flowcell,
+                    user = opts$user,
                     rawdata = opts$save_raw,
                     subsample = opts$subsample
                   )
