@@ -1,6 +1,6 @@
 ---
 title: |
-  <img style="float: right;" width="150;" src="www/bcl2.png">  FASTQ report    
+  <img style="float: right;" width="130;" src="www/bcl2.png">  FASTQ report    
   
 output:
  html_document:
@@ -49,13 +49,14 @@ params:
    step: 0.1
    value: 1
 ---
+Generated at `r params$author` on `r format.Date(Sys.time())`. All data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.    
 
-Generated at `r params$author` on `r format.Date(Sys.time())`.    
+***
+
 Run date: <span class="badge"> `r params$rundate` </span>    
 Platform: <span class="badge"> `r params$sequencer` </span>   
-Flow cell ID: <span class="badge"> `r params$flowcell` </span>          
-User: <span class="badge"> `r params$user` </span>             
-All fastq data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.
+Flowcell: <span class="badge"> `r params$flowcell` </span>          
+User ID: <span class="badge"> `r params$user` </span>             
 
 
 ```{r setup, include=FALSE}
