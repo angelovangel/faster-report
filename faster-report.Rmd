@@ -27,7 +27,11 @@ params:
   input: select
  flowcell:
   label: "Flow cell ID"
-  value: ""
+  value: NA
+  input: text
+ basecall:
+  label: "Basecaller model"
+  value: NA
   input: text
  rundate:
   label: "Run date"
@@ -55,7 +59,8 @@ Generated at `r params$author` on `r format.Date(Sys.time())`. All data is calcu
 
 Run date: <span class="badge"> `r params$rundate` </span>    
 Platform: <span class="badge"> `r params$sequencer` </span>    
-Flow cell: <span class="badge"> `r params$flowcell` </span>  
+Flow cell: <span class="badge"> `r params$flowcell` </span>   
+Basecall: <span class="badge"> [`r params$basecall`](https://github.com/nanoporetech/dorado?tab=readme-ov-file#decoding-dorado-model-names) </span>   
 User: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="badge"> `r params$user` </span>    
 
 
