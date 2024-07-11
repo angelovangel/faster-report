@@ -54,9 +54,9 @@ Generated at `r params$author` on `r format.Date(Sys.time())`. All data is calcu
 ***
 
 Run date: <span class="badge"> `r params$rundate` </span>    
-Platform: <span class="badge"> `r params$sequencer` </span>   
-Flowcell: <span class="badge"> `r params$flowcell` </span>          
-User ID: <span class="badge"> `r params$user` </span>             
+Platform: <span class="badge"> `r params$sequencer` </span>    
+Flow cell: <span class="badge"> `r params$flowcell` </span>  
+User: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="badge"> `r params$user` </span>    
 
 
 ```{r setup, include=FALSE}
