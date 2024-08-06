@@ -45,8 +45,11 @@ if (R.utils::isAbsolutePath(opts$path)) {
   fastqpath <- normalizePath(file.path(calldir, opts$path))
 }
 
+files <- list.files(fastqpath, pattern = opts$regex, full.names = TRUE, recursive = T)
+
 print(paste0("call dir: ", calldir))
 print(paste0("fastq path: ", fastqpath))
+print(paste0("files found: ", length(files)))
 
 # change to match parameter used in Rmd
 if (opts$type == 'illumina') {
