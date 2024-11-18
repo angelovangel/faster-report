@@ -220,7 +220,7 @@ DT::datatable(
   ),
   extensions = 'Buttons',
   options = list(
-    dom = 'Btp',
+    dom = 'Btpi',
     paging = FALSE,
     buttons = c('copy', 'csv', 'excel')
   ),
