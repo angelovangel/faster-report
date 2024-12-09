@@ -150,11 +150,13 @@ dfcols <- c("file", "num_reads", "duplex_reads", "bases", "n_bases", "min_len", 
 
 
 #stats <- parallel::mcmapply(stats_command, fastqfiles)
+# lexocographical arrange of file
+locale <- list(locale = "en_US", numeric = TRUE)
 
 df <- stats_df %>% 
 	dplyr::mutate(file = basename(file)) %>% 
   dplyr::mutate(duplex_reads = nduplex) %>%
-	dplyr::arrange(file) %>%
+	dplyr::arrange(stringi::stri_rank(file, opts_collator = locale)) %>%
 	dplyr::select(dfcols)
 
 # subsample fastqfiles if they are too big, use subsampled for table2 only
@@ -531,7 +533,7 @@ table2_caption <- ifelse(
 )
 
 gc_df %>%
-  dplyr::arrange(file) %>%
+  dplyr::arrange(stringi::stri_rank(file, opts_collator = locale)) %>%
   kableExtra::kbl(escape = F,
                   caption = table2_caption) %>%
   kable_minimal(full_width = T)
