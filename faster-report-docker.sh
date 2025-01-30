@@ -30,3 +30,4 @@ docker run \
     aangeloo/faster-report \
     -p $path \
     "$@"
+echo -e "Report saved in $(dirname $path)"
