@@ -35,7 +35,7 @@ params:
   input: text
  rundate:
   label: "Run date"
-  value: NA
+  value: !r as.character(Sys.Date())
   input: date
  user:
   label: "User"
@@ -220,7 +220,7 @@ kableExtra::kbl(
   # kable_styling(
   #   full_width = T, fixed_thead = TRUE, bootstrap_options = c("responsive")
   # ) %>%
-  kable_minimal(lightable_options = 'hover', full_width = TRUE)
+  kable_styling(bootstrap_options = 'hover', full_width = TRUE)
 
 # DT::datatable(
 #   df,
