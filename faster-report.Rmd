@@ -115,7 +115,7 @@ stats_headers <- c(
   "n_bases",
   "min_len",
   "max_len",
-  "avg_len",
+  "mean_len",
   "Q1",
   "Q2",
   "Q3",
@@ -179,9 +179,6 @@ if (params$subsample < 1) {
 }
 
 
-# these files are 
-#write.csv(df, file = "fastq-stats.csv", row.names = FALSE)
-#write_xlsx(df, "fastq-stats.xlsx", format_headers = TRUE, col_names = TRUE)
 
 # get some summary data
 num_files <- length(fastqfiles)
@@ -213,35 +210,17 @@ if (any(df$num_reads < 10)) {
 }
 
 kableExtra::kbl(
-  df, 
-  digits = 2, caption = 'Table 1. FASTQ files statistics', 
+  df,
+  digits = 2, escape = F,
+  caption = 'Table 1. FASTQ files statistics', 
   format.args = list(big.mark = ",")
   ) %>%
+  #column_spec(2, background = spec_color(df$reads, option = 'turbo', begin = 0.4, end = 0.6)) %>%
   # kable_styling(
   #   full_width = T, fixed_thead = TRUE, bootstrap_options = c("responsive")
   # ) %>%
   kable_styling(bootstrap_options = 'hover', full_width = TRUE)
 
-# DT::datatable(
-#   df,
-#   escape = F,
-#   filter = 'top',
-#   caption = htmltools::tags$caption(
-#     style = 'caption-side: bottom; text-align: left; color: grey;',
-#     paste0('All samples have at least 10 reads: ', checkpoint)
-#   ),
-#   extensions = 'Buttons',
-#   options = list(
-#     dom = 'Btpi',
-#     paging = FALSE,
-#     searchHighlight = TRUE,
-#     buttons = c('copy', 'csv', 'excel')
-#   ),
-#   rownames = FALSE,
-#   class = 'hover row-border'
-# ) %>%
-#   DT::formatRound(2:8, 0) %>%
-#   DT::formatRound(9:10, 2)
 
 ```
 
