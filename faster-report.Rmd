@@ -527,7 +527,7 @@ gc_df %>%
   dplyr::arrange(stringi::stri_rank(file, opts_collator = locale)) %>%
   kableExtra::kbl(escape = F,
                   caption = paste0("Table2. ", table2_caption)) %>%
-  kable_minimal(full_width = T)
+  kable_styling(full_width = T)
 
 	# kable_styling(fixed_thead = TRUE, bootstrap_options = c("responsive")
 	#               )
