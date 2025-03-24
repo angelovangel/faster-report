@@ -192,13 +192,15 @@ num_bases_text <- system2("bin/siformat.sh", args = num_bases, stdout = T)
 
 ***
 
-### FASTQ read quality metrics
+### FASTQ read quality metrics {.tabset}
 The report contains 
 <blockquote>  
 **`r num_files`** fastq files  
 **`r num_reads_text`** reads  
 **`r num_bases_text`** bases  
 </blockquote>
+
+#### Table 1
 
 ```{r table1, include=TRUE}
 
@@ -225,8 +227,7 @@ kableExtra::kbl(
 ```
 
 
-***
-
+#### Table 2
 
 
 ```{r table2, include=TRUE, message=FALSE, eval=checkpoint}
