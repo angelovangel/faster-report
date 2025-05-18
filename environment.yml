@@ -5,10 +5,10 @@ dependencies:
   - r-funr
   - r-r.utils
   - r-stringr
-  - r-writexl
+  #- r-writexl
   - r-knitr
-  - r-dt
-  - r-kableExtra
+  - r-reactable
+  #- r-kableExtra
   - r-dplyr
   - r::r-sparkline
   - r-htmlwidgets
@@ -17,4 +17,5 @@ dependencies:
   - r-parallelmap
   - r-optparse
   - r-rmarkdown
+  - r-shiny
   - r-funr

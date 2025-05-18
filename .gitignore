@@ -10,3 +10,4 @@ renv/.DS_Store
 test*
 data
 
+.Rproj.user
