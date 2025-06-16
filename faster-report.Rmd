@@ -218,23 +218,30 @@ tags$p(
 
 # use reactable to enable sorting
 tagList(
-  tags$button(
-    'Download as CSV', onclick = "Reactable.downloadDataCSV(tableId = 'table1', filename = 'faster-report.csv')"
+  div(
+    tags$button(
+      'Download as CSV', onclick = "Reactable.downloadDataCSV(tableId = 'table1', filename = 'faster-report.csv')"
+    )
+    #tags$select(id = 'custom-numbers', lapply(c('No formatting', 'Thousand separator', 'SI units'), tags$option))
   ),
+  
+  tags$hr("aria-hidden" = "true"),
+  
   reactable::reactable(
     df,
     pagination = F,
     elementId = 'table1',
     fullWidth = T, 
+    wrap = F,
     #searchable = T,
     columns = list(
-      file = colDef(minWidth = 150),
+      file = colDef(minWidth = 150, filterable = T),
       reads = colDef(format = colFormat(separators = T)),
       bases = colDef(format = colFormat(separators = T)),
-      min_len = colDef(format = colFormat(separators = T)),
-      max_len = colDef(format = colFormat(separators = T)),
-      N50 = colDef(format = colFormat(separators = T)),
-      Q30 = colDef(format = colFormat(suffix = '%', digits = 2))
+      min_len = colDef(format = colFormat(separators = T), minWidth = 50),
+      max_len = colDef(format = colFormat(separators = T), minWidth = 50),
+      N50 = colDef(format = colFormat(separators = T), minWidth = 50),
+      Q30 = colDef(format = colFormat(suffix = '%', digits = 2), minWidth = 50)
     )
   )
 )
@@ -547,8 +554,15 @@ gc_df %>%
   reactable(
     fullWidth = T, 
     pagination = F,
-    defaultColDef = colDef(html = T, sortable = F, filterable = F, resizable = T, vAlign = "bottom"),
+    #searchable = T,
+    defaultColDef = colDef(
+      html = T, 
+      sortable = F, 
+      filterable = F, 
+      resizable = T, 
+      vAlign = "bottom"),
     columns = list(
+     #file = colDef(filterable = T),
       kmer_counts = colDef(minWidth = 200)
     )
   )
