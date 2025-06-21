@@ -53,6 +53,13 @@ params:
    step: 0.1
    value: 1
 ---
+<style type="text/css">
+.main-container {
+  max-width: 85% !important;
+  margin: auto;
+}
+</style>
+
 Generated at `r params$author` on `r format.Date(Sys.time())`. All data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.    
 
 ***
@@ -79,7 +86,8 @@ knitr::opts_chunk$set(
 
 #require(seqTools)
 require(stringr)
-#require(writexl)
+require(bslib)
+require(bsicons)
 require(knitr)
 require(shiny)
 #require(kableExtra)
@@ -228,6 +236,9 @@ tagList(
         placeholder = "Search...",
         style = "padding: 0.25rem 0.5rem;",
         oninput = "Reactable.setSearch('table1', this.value)"
+        #oninput = "Reactable.setData('table1', {
+        #reads: ['1', '2', this.value]
+        #})"
       )
     #tags$select(id = 'custom-numbers', lapply(c('No formatting', 'Thousand separator', 'SI units'), tags$option))
   ),
@@ -239,10 +250,15 @@ tagList(
     pagination = F,
     elementId = 'table1',
     fullWidth = T, 
-    wrap = F,
+    wrap = F, resizable = TRUE, bordered = TRUE,
     #searchable = T,
     columns = list(
-      file = colDef(minWidth = 150),
+      file = colDef(minWidth = 150, 
+        #html = TRUE,
+        #cell = function(index) {
+        #  as.character(bslib::tooltip(bsicons::bs_icon("info-circle"), 'test'))
+        #}
+      ),
       reads = colDef(format = colFormat(separators = T)),
       bases = colDef(format = colFormat(separators = T)),
       min_len = colDef(format = colFormat(separators = T), minWidth = 50),
@@ -561,15 +577,16 @@ gc_df %>%
   reactable(
     fullWidth = T, 
     pagination = F,
-    #searchable = T,
     defaultColDef = colDef(
       html = T, 
       sortable = F, 
       filterable = F, 
-      resizable = T, 
+      #resizable = F, 
       vAlign = "bottom"),
     columns = list(
      #file = colDef(filterable = T),
+      q_score_dist = colDef(minWidth = 150),
+      base_yield_by_len = colDef(minWidth = 200),
       kmer_counts = colDef(minWidth = 200)
     )
   )
