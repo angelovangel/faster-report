@@ -90,7 +90,7 @@ require(bslib)
 require(bsicons)
 require(knitr)
 require(shiny)
-#require(kableExtra)
+require(scales)
 require(reactable)
 require(dplyr)
 require(sparkline)
@@ -112,6 +112,10 @@ if(length(fastqfiles) < 1) {
 
 names(fastqfiles) <- basename(fastqfiles)
 numcores <- ifelse(parallel::detectCores() > 2, parallel::detectCores(), 2)
+
+si <- function(x, acc = 0.1) {
+  scales::label_number(scale_cut = cut_short_scale(), accuracy = acc)(x)
+  }
 
 ```
 
@@ -194,9 +198,9 @@ num_files <- length(fastqfiles)
 num_reads <- df %>% dplyr::summarise(seqs = sum(reads)) %>% as.numeric()
 #num_duplex_reads <- df %>% dplyr::summarise(seqs = sum(duplex_reads, na.rm = T)) %>% as.numeric()
 #num_duplex_reads_text <- system2("bin/siformat.sh", args = num_duplex_reads, stdout = T)
-num_reads_text <- system2("bin/siformat.sh", args = num_reads, stdout = T)
+num_reads_text <- si(num_reads, acc = 1) #system2("bin/siformat.sh", args = num_reads, stdout = T)
 num_bases <- df %>% dplyr::summarise(bases = sum(bases)) %>% as.numeric()
-num_bases_text <- system2("bin/siformat.sh", args = num_bases, stdout = T)
+num_bases_text <- si(num_bases, acc = 1) #system2("bin/siformat.sh", args = num_bases, stdout = T)
 ```
 
 ***
@@ -274,7 +278,7 @@ tagList(
 
 
 
-```{r table2, include=TRUE, message=FALSE, eval=checkpoint}
+```{r table2_prep, include=TRUE, message=FALSE, eval=checkpoint}
 # sparkline(0) # load dependencies
 # see https://omnipotent.net/jquery.sparkline/#s-docs
 # on how to include both x and y values in spark
@@ -291,7 +295,7 @@ spk_tool <- function(label, x, values) {
    htmlwidgets::JS(
      sprintf(
  		"function(sparkline, options, field){ return %s[field[0].offset]; }",
-     jsonlite::toJSON(paste(label, x, ":",values, sep = " "))
+     jsonlite::toJSON(paste0(label, x, ': ', values))
      )
    )
 }
@@ -325,8 +329,11 @@ spark_gc <- function(gc_density_obj) {
 spark_phred <- function(phred_density_obj) {
   #spk_chr(paste( round(phred_density_obj$x, digits = 2), ":", phred_density_obj$y, sep = ""),
   fillcolor <- "#5D6D7E"
+  total_reads <- sum(phred_density_obj$counts)
+  percent_reads_over_qscore <- round(phred_density_obj$counts / total_reads * 100, 0)
   spk_chr(
-    round(phred_density_obj$y, digits = 2),
+    phred_density_obj$counts,
+    #round(phred_density_obj$y, digits = 2),
     type = "bar",
     # to highlight q-value of 30, only array (60 elements) seems to work, don't know how to pass range map here
     colorMap = c(
@@ -344,8 +351,8 @@ spark_phred <- function(phred_density_obj) {
     height = 40,
     tooltipFormatter = spk_tool(
       "qscore ",
-      phred_density_obj$x,
-      round(phred_density_obj$y, 2)
+      phred_density_obj$breaks,
+      paste0(si(x = phred_density_obj$counts, acc = 0.1), " reads (", percent_reads_over_qscore, "%)")
     )
   )
 }
@@ -355,21 +362,23 @@ log_formatter <- htmlwidgets::JS(sprintf("function(x){ return Math.round(Math.po
 	
 # in order to be able to compare across vastly different lengths, use special scale
 spark_len <- function(len_density_obj) {
+  bases_over_len <- len_density_obj$counts * len_density_obj$mids
+  bases_total <- sum(bases_over_len)
+  percent_bases_over_len <- round(bases_over_len / bases_total * 100, 0)
   spk_chr(
-    #paste(len_density_obj$mids, ":", len_density_obj$counts, sep = ""),
-    len_density_obj$counts * len_density_obj$mids,
+    # cumulative bases over length
+    # sum(len_density_obj$mids * len_density_obj$counts) - cumsum(len_density_obj$mids * len_density_obj$counts) 
+    bases_over_len,
     type = "bar",
     barColor = "#5D6D7E",
-    #lineWidth = 3,
-    #fillColor = "#D0D3D4",
-    #lineColor = "#5D6D7E",
-    #spotColor = FALSE,
-    #minSpotColor = FALSE,
-    #maxSpotColor = "red",
-    #spotRadius = 3,
     width = 220,
     height = 40,
-    tooltipFormatter = spk_tool("length: ", round(len_density_obj$mids, 0), len_density_obj$counts)
+    tooltipFormatter = spk_tool(
+      "length ", si(len_density_obj$mids, acc = 0.1),
+      paste0(si(x = len_density_obj$counts, acc = 0.1), " reads (", percent_bases_over_len, "% of bases)")
+      #formatC(bases_over_len, big.mark = ",", mode = "integer")
+      #paste0("bases: ", si(bases_over_len))
+    )
     #tooltipFormat = "<span style='color: {{color}}'>&#9679;</span> {{prefix}}length: {{x}} {{suffix}}</span>"
     #numberFormatter = log_formatter
   )
@@ -384,7 +393,11 @@ spark_kmers <- function(kmers_tbl) {
     #colorMap = c("red", rep(fillcolor, 15), "red", rep(fillcolor, 15), "red", rep(fillcolor, 15), "red", rep(fillcolor, 15)),
     width = 260,
     height = 40,
-    tooltipFormatter = spk_tool("", kmers_tbl$kmer, kmers_tbl$counts)
+    tooltipFormatter = spk_tool(
+      "", 
+      kmers_tbl$kmer, 
+      si(kmers_tbl$counts, acc = 0.1)
+      )
   )
 }
 
@@ -567,10 +580,15 @@ table2_caption <- ifelse(
   "Density distributions of GC-content, 'mean' q-score, length and k-mer counts. Lengths > 50 kb are binned to 50 kb.",
   "GC-content, base content per cycle, 'mean' q-score, q-score per cycle, duplication rate and k-mer counts."
 )
+
 tags$p(
   style = 'color: #7f8c8d;',
   'Table 2. ', table2_caption
 )
+```
+
+
+```{r table2, include=TRUE, message=FALSE, eval=checkpoint}
 
 gc_df %>%
   dplyr::arrange(stringi::stri_rank(file, opts_collator = locale)) %>%
@@ -585,13 +603,16 @@ gc_df %>%
       vAlign = "bottom"),
     columns = list(
      #file = colDef(filterable = T),
-      q_score_dist = colDef(minWidth = 150),
+      dupl_rate = colDef(minWidth = 50),
+      q_score_dist = colDef(minWidth = 200),
       base_yield_by_len = colDef(minWidth = 200),
       kmer_counts = colDef(minWidth = 200)
     )
   )
 
 ```
+
+
 
 ```{r cleanup, include = FALSE}
 if (dir.exists('subsampled')) {

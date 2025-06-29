@@ -29,14 +29,14 @@ faster_qscore <- function(x, saveraw = FALSE) {
   require(data.table)
   
   samplename <- basename(tools::file_path_sans_ext(x, compression = T))
-  density_obj <- system2("faster2", args = c("--qual", x), stdout = TRUE) %>%
-    as.numeric() %>%
+  q <- system2("faster2", args = c("--qual", x), stdout = TRUE) %>% as.numeric()
+  q <- q[q > 1 & q < 60]
     # actually use density() here, not hist(). It returns a density list object with x and y, x is fixed from 1 to 50
-    density(from = 1, to = 60, n = 60, na.rm = TRUE) # n is the number of equally spaced points at which the density is to be estimated.
-  #
+    #density(from = 1, to = 60, n = 60, na.rm = TRUE) # n is the number of equally spaced points at which the density is to be estimated.
+  density_obj <- hist(q, breaks = seq(1, 60), plot = FALSE)
   if(isTRUE(saveraw)) {
     #if(!dir.exists("rawdata")) {dir.create("rawdata")}
-    data.table::fwrite(data.frame(x = density_obj$x, y = density_obj$y), 
+    data.table::fwrite(data.frame(x = density_obj$mids, y = density_obj$counts), 
                        file = paste0("rawdata/", "faster_qscore", "-", samplename, ".tsv"), 
                        sep = "\t")
     }
