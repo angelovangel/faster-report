@@ -198,9 +198,9 @@ num_files <- length(fastqfiles)
 num_reads <- df %>% dplyr::summarise(seqs = sum(reads)) %>% as.numeric()
 #num_duplex_reads <- df %>% dplyr::summarise(seqs = sum(duplex_reads, na.rm = T)) %>% as.numeric()
 #num_duplex_reads_text <- system2("bin/siformat.sh", args = num_duplex_reads, stdout = T)
-num_reads_text <- si(num_reads, acc = 1) #system2("bin/siformat.sh", args = num_reads, stdout = T)
+num_reads_text <- system2("bin/siformat.sh", args = num_reads, stdout = T)
 num_bases <- df %>% dplyr::summarise(bases = sum(bases)) %>% as.numeric()
-num_bases_text <- si(num_bases, acc = 1) #system2("bin/siformat.sh", args = num_bases, stdout = T)
+num_bases_text <- system2("bin/siformat.sh", args = num_bases, stdout = T)
 ```
 
 ***
