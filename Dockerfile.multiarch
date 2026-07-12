@@ -1,0 +1,90 @@
+## syntax=docker/dockerfile:1
+# Multi-platform build: faster/faster2/fastkmers are compiled from source
+# with cargo for both linux/amd64 and linux/arm64, since upstream only
+# publishes pre-built x86_64 Linux binaries.
+
+########################
+# Stage 1: build the three Rust CLI tools for the target platform
+########################
+# No --platform=$BUILDPLATFORM here on purpose: buildx will run this stage
+# natively (or under QEMU) for EACH requested platform, so cargo/gcc/cmake
+# just target whatever machine they're actually running on. This avoids
+# needing a real cross-compiler toolchain + sysroot for glibc, which is what
+# was breaking cmake's compiler check when cross-compiling from one arch.
+FROM rust:1-bookworm AS rust-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git pkg-config libssl-dev ca-certificates cmake build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+
+# compile faster, faster2 and fastkmers from source, natively for this platform
+# (upstream only publishes x86_64 binaries, so we build every arch the same way)
+RUN set -eux; \
+    mkdir -p /out; \
+    git clone --depth 1 https://github.com/angelovangel/faster.git    faster    && \
+    git clone --depth 1 https://github.com/angelovangel/faster2.git   faster2   && \
+    git clone --depth 1 https://github.com/angelovangel/fastkmers.git fastkmers && \
+    (cd faster    && cargo build --release) && \
+    (cd faster2   && cargo build --release) && \
+    (cd fastkmers && cargo build --release) && \
+    cp faster/target/release/faster        /out/faster && \
+    cp faster2/target/release/faster2      /out/faster2 && \
+    cp fastkmers/target/release/fastkmers  /out/fastkmers && \
+    chmod 755 /out/faster /out/faster2 /out/fastkmers
+
+########################
+# Stage 2: the actual report image
+########################
+FROM rocker/r2u:latest
+
+LABEL author="Angel Angelov <aangeloo@gmail.com>"
+LABEL description="Docker image containing the requirements for faster-report"
+
+RUN apt-get update && apt-get install -y \
+    pandoc nano ksh procps libxt-dev libssl-dev libxml2-dev libfontconfig1-dev \
+    && rm -rf /var/lib/apt/lists/*
+# libxt-dev is required to solve the segfault error caused by cairoVersion() in R
+
+COPY --from=rust-builder /out/faster    /temp/bin/faster
+COPY --from=rust-builder /out/faster2   /temp/bin/faster2
+COPY --from=rust-builder /out/fastkmers /temp/bin/fastkmers
+ENV PATH="/temp/bin:${PATH}"
+
+RUN install2.r \
+    'R.utils' \
+    stringr \
+    writexl \
+    knitr \
+    bslib \
+    bsicons \
+    shiny \
+    scales \
+    DT \
+    reactable \
+    kableExtra \
+    dplyr \
+    sparkline \
+    htmlwidgets \
+    jsonlite \
+    parallelMap \
+    optparse \
+    rmarkdown \
+    funr \
+    && rm -rf /tmp/downloaded_packages
+
+COPY . /temp
+
+# sanity check: make sure the repo's own bin/ scripts (global.R, nduplex.sh,
+# siformat.sh) actually made it into the image alongside the compiled tools.
+# 
+RUN test -f /temp/bin/global.R || \
+    (echo "ERROR: /temp/bin/global.R missing - check your build context includes bin/" >&2 && exit 1)
+
+ENTRYPOINT [ "/temp/faster-report.R" ]
+
+# Build & push both platforms, e.g.:
+# docker buildx create --use --name multiarch-builder   # once, if you don't already have a builder
+# docker buildx build --platform linux/amd64,linux/arm64 \
+#   -t aangeloo/faster-report:latest --push .

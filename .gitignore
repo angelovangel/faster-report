@@ -9,5 +9,7 @@ rawdata
 renv/.DS_Store
 test*
 data
-
+output
+.nextflow*
+work
 .Rproj.user
