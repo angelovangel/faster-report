@@ -85,6 +85,9 @@ RUN test -f /temp/bin/global.R || \
 ENTRYPOINT [ "/temp/faster-report.R" ]
 
 # Build & push both platforms, e.g.:
-# docker buildx create --use --name multiarch-builder   # once, if you don't already have a builder
-# docker buildx build --platform linux/amd64,linux/arm64 \
-#   -t aangeloo/faster-report:latest --push .
+# docker buildx create --use --name multiarch-builder   # once
+# docker buildx build \
+#  --platform linux/amd64,linux/arm64 \
+#  -f Dockerfile.multiarch \
+#  -t aangeloo/faster-report:latest \
+#  --push .

@@ -64,7 +64,6 @@ print(paste0("fastq path: ", fastqpath))
 # change to match parameter used in Rmd
 if (opts$type == 'illumina') {
   opts$type <- 'Illumina'
-  opts$flowcell <- 'NA'
   opts$basecall <- 'NA'
 } else if (opts$type == 'ont') {
   opts$type <- 'Nanopore'
