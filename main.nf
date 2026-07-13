@@ -6,7 +6,7 @@ nextflow.enable.dsl = 2
  * Simple Nextflow wrapper around the aangeloo/faster-report Docker image.
  *
  * Usage:
- *   nextflow run main.nf --fastq_dir /path/to/fastq [other options]
+ *   nextflow run main.nf --fastq /path/to/fastq [other options]
  *
  * flowcell / rundate / basecall / type (platform) are auto-detected from the
  * first fastq file's header (GET_HEADER_DATA). Any of --type / --flowcell /
@@ -14,7 +14,7 @@ nextflow.enable.dsl = 2
  * the detected value.
  */
 
-params.fastq     = null          // required: path to folder with fastq files
+params.reads     = null          // required: path to folder with fastq files
 params.regex     = 'fastq(\\.gz)?$'
 params.type      = null          // illumina | ont | pacbio; auto-detected if not set
 params.rundate   = null
@@ -26,21 +26,37 @@ params.subsample = 1.0
 params.outfile   = 'faster-report.html'
 params.outdir    = 'output'
 
-if (!params.fastq) {
-    error "Please provide a path to a folder with fastq files: --fastq /path/to/fastq"
+if (!params.reads) {
+    error "Please provide a path to a folder with fastq/bam files: --reads /path/to/fastq"
+}
+
+process CONVERT_READS {
+    container 'docker.io/aangeloo/nxf-tgs:latest'
+    
+    input:
+        path reads
+
+    output:
+        path("*.fastq")
+
+    script:
+    """
+    samtools fastq -@ ${task.cpus} -T '*' ${reads} > ${reads.simpleName}.fastq
+    """
+
 }
 
 process GET_HEADER_DATA {
 
     input:
-    path fastq
+    path 'temp/*' // collected there and passed to script
 
     output:
     path 'header_data.csv'
 
     script:
     """
-    get-header-data.sh ${fastq} "${params.regex}" > header_data.csv
+    get-header-data.sh temp "${params.regex}" > header_data.csv
     """
 }
 
@@ -48,7 +64,7 @@ process FASTER_REPORT {
     publishDir params.outdir, mode: 'copy'
 
     input:
-    path fastq
+    path 'temp/*'
     tuple val(platform_detected), val(flowcell_detected), val(rundate_detected), val(basecall_detected)
 
     output:
@@ -76,7 +92,7 @@ process FASTER_REPORT {
     def saveraw     = params.save_raw ? "-s TRUE" : ''
     """
     /temp/faster-report.R \\
-        -p ${fastq} \\
+        -p temp \\
         -r '${params.regex}' \\
         -t ${type} \\
         ${rundateOpt} \\
@@ -89,12 +105,29 @@ process FASTER_REPORT {
     """
 }
 
-workflow {
-    fastq_ch = Channel.fromPath(params.fastq, type: 'dir', checkIfExists: true)
+pattern = "*.{bam,fasta,fastq,fastq.gz,fq,fq.gz}"
+ch_files = Channel.fromPath(params.reads + "/" + pattern, type: 'file', checkIfExists: true) 
 
-    header_ch = GET_HEADER_DATA(fastq_ch)
+workflow {
+    // Branch reads into BAM and others for centralized conversion
+    //ch_reads = Channel.fromPath(params.reads, type: 'dir', checkIfExists: true)
+    ch_files
+        .branch {
+            bam: it.name.endsWith('.bam')
+            other: true
+        }
+        .set { ch_reads_split }
+
+    ch_fastq = CONVERT_READS(ch_reads_split.bam)
+        .mix(ch_reads_split.other)
+        .collect()
+
+    //ch_fastq.view()
+    //fastq_ch = Channel.fromPath(params.reads, type: 'dir', checkIfExists: true)
+
+    header_ch = GET_HEADER_DATA(ch_fastq)
         .splitCsv()
         .map { row -> tuple(row[0], row[1], row[2], row[3]) }
     //header_ch.view()
-    FASTER_REPORT(fastq_ch, header_ch)
+    FASTER_REPORT(ch_fastq, header_ch)
 }
