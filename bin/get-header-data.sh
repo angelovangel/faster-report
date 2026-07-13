@@ -3,17 +3,18 @@
 # get run info (platform, flowcell, rundate, basecaller model) from a fastq file header
 # platform is auto-detected as one of: ont, pacbio, illumina, unknown
 #
-# usage: get-header-data.sh <fastq_dir> [<regex>]
+# usage: get-header-data.sh <fastq_dir>
 
 
-FASTQDIR="${1:?usage: get-header-data.sh <fastq_dir> [<regex>]}"
-REGEX="${2:-fastq(\.gz)?$}"
+FASTQDIR="${1:?usage: get-header-data.sh <fastq_dir>}"
+# Matches the Nextflow pattern: *.{bam,fasta,fastq,fastq.gz,fq,fq.gz}
+REGEX='\.(fastq|fq|fasta|bam)(\.gz)?$'
 
 FASTQFILE=$(find -L "$FASTQDIR" -type f 2>/dev/null | grep -E "$REGEX" | sort | head -n 1 || true)
 #echo fastq file: "$FASTQFILE"
 
 if [[ -z "$FASTQFILE" ]]; then
-    echo "Error: no fastq file found in $FASTQDIR matching regex $REGEX" >&2
+    echo "Error: no fastq/bam/fasta file found in $FASTQDIR matching regex $REGEX" >&2
     exit 1
 fi
 
@@ -52,7 +53,10 @@ detect_platform() {
        [[ "$h" =~ runid= ]] || \
        [[ "$h" =~ start_time= ]] || \
        [[ "$h" =~ model_version_id= ]] || \
-       [[ "$h" =~ RG:Z:[^[:space:]]*_(dna|rna)_r[0-9] ]]; then
+       [[ "$h" =~ RG:Z:[^[:space:]]*_(dna|rna)_r[0-9] ]] || \
+       [[ "$h" =~ st:Z: ]] || \
+       [[ "$h" =~ \bt:Z: ]] || \
+       [[ "$h" =~ fn:Z: ]]; then
         echo "ont"
         return
     fi
@@ -83,15 +87,28 @@ case "$PLATFORM" in
         if [[ -z "$FLOWCELL" ]]; then
             FLOWCELL=$(printf '%s\n' "$HEADER" | grep -oE 'flow_cell_id=[^[:space:]]+' | head -n 1 | cut -d= -f2)
         fi
+        if [[ -z "$FLOWCELL" ]]; then
+            FN_TAG=$(printf '%s\n' "$HEADER" | grep -oE 'fn:Z:[^[:space:]]+' | head -n 1 | cut -d: -f3)
+            if [[ -n "$FN_TAG" ]]; then
+                FLOWCELL=$(printf '%s\n' "$FN_TAG" | cut -d_ -f1)
+            fi
+        fi
 
         RUNDATE=$(printf '%s\n' "$HEADER" | grep -oE 'DT:Z:[^[:space:]]+' | head -n 1 | cut -d: -f3 | cut -dT -f1)
         if [[ -z "$RUNDATE" ]]; then
             RUNDATE=$(printf '%s\n' "$HEADER" | grep -oE 'start_time=[^[:space:]]+' | head -n 1 | cut -d= -f2 | cut -dT -f1)
         fi
+        if [[ -z "$RUNDATE" ]]; then
+            RUNDATE=$(printf '%s\n' "$HEADER" | grep -oE 'st:Z:[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n 1 | cut -d: -f3)
+        fi
+        if [[ -z "$RUNDATE" ]]; then
+            RUNDATE=$(printf '%s\n' "$HEADER" | grep -oE '\bt:Z:[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n 1 | cut -d: -f3)
+        fi
 
         BC_MODEL=$(printf '%s\n' "$HEADER" | grep -oE 'RG:Z:[^[:space:]]+' | head -n 1 | cut -d: -f3)
         if [[ -n "$BC_MODEL" ]]; then
             BC_MODEL="${BC_MODEL#*_}"
+            BC_MODEL=$(printf '%s\n' "$BC_MODEL" | sed -E 's/(@v[0-9.]+)(_.*)?/\1/')
             BC_MODEL="${BC_MODEL%_barcode*}"
         else
             BC_MODEL=$(printf '%s\n' "$HEADER" | grep -oE 'model_version_id=[^[:space:]]+' | head -n 1 | cut -d= -f2)
@@ -125,15 +142,28 @@ case "$PLATFORM" in
         if [[ -z "$FLOWCELL" ]]; then
             FLOWCELL=$(printf '%s\n' "$HEADER" | grep -oE 'flow_cell_id=[^[:space:]]+' | head -n 1 | cut -d= -f2)
         fi
+        if [[ -z "$FLOWCELL" ]]; then
+            FN_TAG=$(printf '%s\n' "$HEADER" | grep -oE 'fn:Z:[^[:space:]]+' | head -n 1 | cut -d: -f3)
+            if [[ -n "$FN_TAG" ]]; then
+                FLOWCELL=$(printf '%s\n' "$FN_TAG" | cut -d_ -f1)
+            fi
+        fi
 
         RUNDATE=$(printf '%s\n' "$HEADER" | grep -oE 'DT:Z:[^[:space:]]+' | head -n 1 | cut -d: -f3 | cut -dT -f1)
         if [[ -z "$RUNDATE" ]]; then
             RUNDATE=$(printf '%s\n' "$HEADER" | grep -oE 'start_time=[^[:space:]]+' | head -n 1 | cut -d= -f2 | cut -dT -f1)
         fi
+        if [[ -z "$RUNDATE" ]]; then
+            RUNDATE=$(printf '%s\n' "$HEADER" | grep -oE 'st:Z:[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n 1 | cut -d: -f3)
+        fi
+        if [[ -z "$RUNDATE" ]]; then
+            RUNDATE=$(printf '%s\n' "$HEADER" | grep -oE '\bt:Z:[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n 1 | cut -d: -f3)
+        fi
 
         BC_MODEL=$(printf '%s\n' "$HEADER" | grep -oE 'RG:Z:[^[:space:]]+' | head -n 1 | cut -d: -f3)
         if [[ -n "$BC_MODEL" ]]; then
             BC_MODEL="${BC_MODEL#*_}"
+            BC_MODEL=$(printf '%s\n' "$BC_MODEL" | sed -E 's/(@v[0-9.]+)(_.*)?/\1/')
             BC_MODEL="${BC_MODEL%_barcode*}"
         else
             BC_MODEL=$(printf '%s\n' "$HEADER" | grep -oE 'model_version_id=[^[:space:]]+' | head -n 1 | cut -d= -f2)

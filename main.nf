@@ -6,7 +6,7 @@ nextflow.enable.dsl = 2
  * Simple Nextflow wrapper around the aangeloo/faster-report Docker image.
  *
  * Usage:
- *   nextflow run main.nf --fastq /path/to/fastq [other options]
+ *   nextflow run main.nf --reads /path/to/fastq (or bam) [other options]
  *
  * flowcell / rundate / basecall / type (platform) are auto-detected from the
  * first fastq file's header (GET_HEADER_DATA). Any of --type / --flowcell /
@@ -14,20 +14,43 @@ nextflow.enable.dsl = 2
  * the detected value.
  */
 
-params.reads     = null          // required: path to folder with fastq files
-params.regex     = 'fastq(\\.gz)?$'
-params.type      = null          // illumina | ont | pacbio; auto-detected if not set
-params.rundate   = null
-params.flowcell  = null
-params.basecall  = null
-params.user      = null
-params.save_raw  = false
-params.subsample = 1.0
-params.outfile   = 'faster-report.html'
-params.outdir    = 'output'
+if (params.help) {
+    log.info """
+    ================================================================================
+     FASTER-REPORT PIPELINE
+     https://github.com/angelovangel/faster-report
+    ================================================================================
+     Generates interactive HTML quality control reports for FASTQ/BAM files.
+
+     Usage:
+       nextflow run angelovangel/faster-report --reads <path_to_reads_folder> [options]
+
+     Required Parameters:
+       --reads         Path to the folder containing FASTQ/BAM files.
+
+     Optional Parameters:
+       --type          Sequencing platform used ('illumina', 'ont', or 'pacbio').
+                       If not set, it is auto-detected from the FASTQ headers.
+       --subsample     Fraction of reads to subsample for k-mers calculation (0.1 to 1.0, default: 1.0).
+       --outfile       Name of the output HTML report file (default: 'faster-report.html').
+       --outdir        Directory where the output report is saved (default: 'output').
+       --save_raw      Save raw CSV data used for plotting ('true' or 'false', default: false).
+
+     Metadata Override Options (will override values auto-detected from FASTQ headers):
+       --flowcell      Flow cell ID
+       --rundate       Run date
+       --basecall      Basecaller model
+       --user          User name
+
+     Other Options:
+       --help          Display this help message.
+    ================================================================================
+    """
+    exit 0
+}
 
 if (!params.reads) {
-    error "Please provide a path to a folder with fastq/bam files: --reads /path/to/fastq"
+    error "Please provide a path to a folder with fastq/bam files: --reads /path/to/fastq. Use --help for full usage options."
 }
 
 process CONVERT_READS {
@@ -47,6 +70,8 @@ process CONVERT_READS {
 }
 
 process GET_HEADER_DATA {
+    //container 'aangeloo/faster-report'
+    //containerOptions "--entrypoint ''"
 
     input:
     path 'temp/*' // collected there and passed to script
@@ -56,12 +81,14 @@ process GET_HEADER_DATA {
 
     script:
     """
-    get-header-data.sh temp "${params.regex}" > header_data.csv
+    get-header-data.sh temp > header_data.csv
     """
 }
 
 process FASTER_REPORT {
     publishDir params.outdir, mode: 'copy'
+    container 'aangeloo/faster-report'
+    containerOptions "--entrypoint ''"
 
     input:
     path 'temp/*'
@@ -93,7 +120,7 @@ process FASTER_REPORT {
     """
     /temp/faster-report.R \\
         -p temp \\
-        -r '${params.regex}' \\
+        -r '\\.(fastq|fq|fasta|bam)(\\.gz)?\$' \\
         -t ${type} \\
         ${rundateOpt} \\
         ${flowcellOpt} \\

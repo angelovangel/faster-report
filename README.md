@@ -1,27 +1,62 @@
 # FASTER-REPORT
-## Generate reports about fastq files 
 
-This repository contains code for generating html reports for fastq files. It uses the 
-`faster` and `faster2` programs to analyise data and a Rmarkdown template to generate the report.
-All major platforms are supported - Illumina, PacBio, ONT. The reports are also different depending on the platform selected.
+Generate interactive quality control HTML reports for FASTQ/BAM files. It supports **Illumina**, **PacBio**, and **Nanopore (ONT)** platforms, with tailored visualizations for each.
 
-## Running
-Two of the many ways to run the code:
+The reports are generated using the fast Rust utilities [faster](https://github.com/angelovangel/faster) / [faster2](https://github.com/angelovangel/faster2) and [fastkmers](https://github.com/angelovangel/fastkmers).
 
-- git clone the repo, use conda to create an environment using the `environment.yml` file. For example, 
-` mamba env update -n base --file environment.yml `. After that, execute `faster-report.R`
-- as above, but open `faster-report.Rmd` in Rstudio and select *Knit with Parameters*
-- use docker, with the helper script `faster-report-docker.sh`
+---
 
-Example run:
+## Execution Options
+
+### 1. Nextflow Pipeline (Recommended)
+Orchestrates BAM-to-FASTQ conversion, header parsing, and report generation in a containerized environment. Only `nextflow` and `docker` needed.
+
 ```bash
-# if all requirements are installed, you can run locally
-faster-report.R -p path/to/fastq/file -d rundate -f flowcellID -o outfile
-# results will be in the directory from which the script was executed, absolute and relative path can be used
-
-# run in docker (mounts your $HOME to $HOME in container, so will not work for files outside of your home)
-# use same parameters as above
-faster-report-docker.sh -p /path/to/fastq/file -d rundate ...
-# results will be in the parent directory of the fastq path directory, only absolute path can be used
-
+nextflow run main.nf --reads /path/to/fastq_directory/ [options]
 ```
+
+* **Header Auto-Detection**: Platform (`type`), run date, flowcell ID, and basecaller model are automatically detected from the first FASTQ file header if not explicitly provided.
+* **BAM Support**: `.bam` files in the reads directory are automatically converted to `.fastq` using `samtools`.
+
+#### Key Nextflow Parameters
+| Parameter | Description | Default |
+| :--- | :--- | :--- |
+| `--reads` | Path to folder containing reads (required) | `null` |
+| `--type` | Sequencer platform (`illumina`, `ont`, or `pacbio`) | Auto-detected (fallback `ont`) |
+| `--subsample` | Fraction of reads to subsample for k-mers (`0.1` to `1.0`) | `1.0` |
+| `--outdir` | Output directory to save the report | `output` |
+| `--outfile` | Name of the output HTML file | `faster-report.html` |
+| `--save_raw` | Save raw CSV tables used for plotting (`true`/`false`) | `false` |
+
+---
+
+### 2. Docker Container
+Run the tool inside a pre-built container using the provided wrapper script (which auto-mounts your `$HOME` directory):
+
+```bash
+./faster-report-docker.sh -p /path/to/fastq_directory/ [options]
+```
+
+Or run via Docker CLI directly:
+```bash
+docker run -it --mount type=bind,src="$HOME",target="$HOME" -w /path/to/workdir aangeloo/faster-report -p /path/to/fastq_directory/
+```
+
+---
+
+### 3. Local CLI Script
+Run the R script directly on your host machine:
+
+```bash
+./faster-report.R -p /path/to/fastq_directory/ [options]
+```
+
+#### Local Prerequisites
+* **System Utilities**: `pandoc`, `samtools` (for BAM input), and the compiled binaries for `faster`, `faster2`, and `fastkmers` placed in `bin/` or your system `PATH`.
+* **R Packages**: `rmarkdown`, `reactable`, `sparkline`, `htmlwidgets`, `dplyr`, `jsonlite`, `optparse`, `funr`, `bslib`, `bsicons`, `scales`.
+* **RStudio**: You can also open `faster-report.Rmd` and select **Knit with Parameters**.
+
+---
+
+## Configuration
+Modify [nextflow.config](file:///Users/angeloas/code/faster-report/nextflow.config) to customize execution parameters like allocated CPUs, memory limits, or docker bind mounts.
