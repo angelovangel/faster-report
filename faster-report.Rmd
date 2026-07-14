@@ -2,6 +2,7 @@
 title: |
   <img style="float: right;" width="130;" src="www/bcl2.png">  FASTQ report    
   
+
 output:
  html_document:
   highlight: tango
@@ -11,7 +12,7 @@ output:
 params:
  author:
   label: "Author"
-  value: "BCL (KAUST Core Laboratories)"
+  value: "KAUST Bioscience Core Laboratory"
   input: text
  fastq_dir:
   label: "Path to folder with fastq files (required, absolute path or relative to current folder)"
@@ -60,7 +61,8 @@ params:
 }
 </style>
 
-Generated at `r params$author` on `r format.Date(Sys.time())`. All data is calculated with the [faster](https://github.com/angelovangel/faster) and [fastkmers](https://github.com/angelovangel/fastkmers) programs.    
+Generated at `r params$author` on `r format.Date(Sys.time())`. All data is calculated with the <a href="https://github.com/angelovangel/faster" target="_blank">faster</a> and <a href="https://github.com/angelovangel/fastkmers" target="_blank">fastkmers</a> programs.    
+Github repository <a href="https://github.com/angelovangel/faster-report" target="_blank">faster-report</a> commit: `r tryCatch(system("git rev-parse --short HEAD", intern = TRUE, ignore.stderr = TRUE), error = function(e) "NA")`
 
 ***
 
