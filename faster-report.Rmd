@@ -53,6 +53,10 @@ params:
    max: 1
    step: 0.1
    value: 1
+ git_commit:
+  label: "Git commit hash"
+  value: "NA"
+  input: text
 ---
 <style type="text/css">
 .main-container {
@@ -641,5 +645,5 @@ if (dir.exists('subsampled')) {
 
 <hr style="margin-top: 2rem; border-color: #ddd;">
 <p style="color: #6c757d; font-size: 0.9em; text-align: right;">
-Github repository: <a href="https://github.com/angelovangel/faster-report" target="_blank" style="color: #4e5256ff;">faster-report</a> | commit: `r tryCatch(system("git rev-parse --short HEAD", intern = TRUE, ignore.stderr = TRUE), error = function(e) "NA")`
+Github repository: <a href="https://github.com/angelovangel/faster-report" target="_blank" style="color: #4e5256ff;">faster-report</a> | commit: `r params$git_commit`
 </p>

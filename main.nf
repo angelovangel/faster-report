@@ -2,6 +2,8 @@
 
 nextflow.enable.dsl = 2
 
+def git_commit = "git rev-parse --short HEAD".execute().text.trim() ?: 'NA'
+
 /*
  * Simple Nextflow wrapper around the aangeloo/faster-report Docker image.
  *
@@ -128,6 +130,7 @@ process FASTER_REPORT {
         ${user} \\
         ${saveraw} \\
         -x ${params.subsample} \\
+        --git_commit ${git_commit} \\
         -o ${params.outfile}
     """
 }

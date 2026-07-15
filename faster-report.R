@@ -39,7 +39,8 @@ option_list <- list(
   make_option(c('--user', '-u'), help = 'User', type = 'character', default = NULL),
   make_option(c('--save_raw', '-s'), help = 'save raw csv data used for plotting [%default]', type = 'logical', default = FALSE),
   make_option(c('--subsample', '-x'), help = 'subsample reads for kmers calculation [%default]', type = 'double', default = 1.0),
-  make_option(c('--outfile','-o'), help = 'name of output report file [%default]', type = 'character', default = 'faster-report.html')
+  make_option(c('--outfile','-o'), help = 'name of output report file [%default]', type = 'character', default = 'faster-report.html'),
+  make_option(c('--git_commit', '-g'), help = 'git commit hash to display in report [%default]', type = 'character', default = 'NA')
   )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -86,6 +87,7 @@ rmarkdown::render(input = "faster-report.Rmd",
                     basecall = opts$basecall,
                     user = opts$user,
                     rawdata = opts$save_raw,
-                    subsample = opts$subsample
+                    subsample = opts$subsample,
+                    git_commit = opts$git_commit
                   )
 )
