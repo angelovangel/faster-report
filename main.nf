@@ -33,7 +33,7 @@ if (params.help) {
      Optional Parameters:
        --type          Sequencing platform used ('illumina', 'ont', or 'pacbio').
                        If not set, it is auto-detected from the FASTQ headers.
-       --subsample     Fraction of reads to subsample for k-mers calculation (0.1 to 1.0, default: 1.0).
+       --subsample     Fraction of reads to subsample for html report gc, len, qscore and k-mer calculation (0.1 to 1.0, default: 1.0).
        --outfile       Name of the output HTML report file (default: 'faster-report.html').
        --outdir        Directory where the output report is saved (default: 'output').
        --save_raw      Save raw CSV data used for plotting ('true' or 'false', default: false).
