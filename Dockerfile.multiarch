@@ -82,7 +82,7 @@ COPY . /temp
 RUN test -f /temp/bin/global.R || \
     (echo "ERROR: /temp/bin/global.R missing - check your build context includes bin/" >&2 && exit 1)
 
-ENTRYPOINT [ "/temp/faster-report.R" ]
+CMD [ "/temp/faster-report.R" ]
 
 # Build & push both platforms, e.g.:
 # docker buildx create --use --name multiarch-builder   # once
