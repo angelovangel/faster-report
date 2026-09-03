@@ -89,6 +89,7 @@ process GET_HEADER_DATA {
 
 process FASTER_REPORT {
     publishDir params.outdir, mode: 'copy'
+    scratch true
     container 'aangeloo/faster-report'
     //containerOptions "--entrypoint ''"
 
