@@ -24,10 +24,6 @@ require(parallel) # may be ships with R, so not in the environment.yml
 require(parallelMap)
 #require(renv)
 
-#!/usr/bin/env Rscript
-library(optparse)
-library(rmarkdown)
-
 # 1. Parse command-line arguments
 option_list <- list(
   make_option(c('--path', '-p'), help = 'path to folder with fastq files', type = 'character', default = NULL),
@@ -59,17 +55,21 @@ if (opts$type == 'illumina') {
   opts$type <- 'PacBio'
 }
 
-# 3. THE SINGULARITY FIX: Read Rmd as an in-memory text stream.
-# This forces rmarkdown to create temporary files in R's local session environment
-# instead of trailing back to a read-only file asset path.
-rmd_text <- readLines("faster-report.Rmd")
+# =========================================================================
+# THE GUARANTEED SINGULARITY REWRITE FIX:
+# Read the source Rmd text and physically write a fresh local copy.
+# This forces R to treat the workspace as its home instead of the read-only layer.
+# =========================================================================
+local_writable_rmd <- "local-execution-report.Rmd"
+writeLines(readLines("faster-report.Rmd"), local_writable_rmd)
 
-# 4. Render the report directly to the current writable workspace
+# 3. Render the report safely inside the current writable workspace folder
 rmarkdown::render(
-  input        = textConnection(rmd_text), 
-  output_file  = opts$outfile,
-  output_dir   = getwd(),
-  knit_root_dir = getwd(),
+  input              = local_writable_rmd, 
+  output_file        = opts$outfile,
+  output_dir         = getwd(),
+  intermediates_dir  = getwd(),
+  knit_root_dir      = getwd(),
   params = list(
     fastq_dir     = normalizePath(opts$path, mustWork = FALSE),
     fastq_pattern = opts$regex,
@@ -83,3 +83,7 @@ rmarkdown::render(
     git_commit    = opts$git_commit
   )
 )
+
+# Clean up our generated local file
+if (file.exists(local_writable_rmd)) file.remove(local_writable_rmd)
+if (file.exists("local-execution-report.knit.md")) file.remove("local-execution-report.knit.md")
