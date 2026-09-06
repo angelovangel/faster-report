@@ -76,6 +76,7 @@ if (opts$type == 'illumina') {
 rmarkdown::render(input = "faster-report.Rmd",
                   output_file = opts$outfile,
                   output_dir = calldir, # important when knitting in docker
+                  intermediates_dir = calldir, # important when knitting in docker
                   knit_root_dir = scriptdir, # important when knitting in docker
                   #envir = new.env(),
                   params = list(
