@@ -122,7 +122,7 @@ process FASTER_REPORT {
     def saveraw     = params.save_raw ? "-s TRUE" : ''
     """
     /temp/faster-report.R \\
-        -p . \\
+        -p /host_work \\
         -r '\\.(fastq|fq|fasta|bam)(\\.gz)?\$' \\
         -t ${type} \\
         ${rundateOpt} \\
