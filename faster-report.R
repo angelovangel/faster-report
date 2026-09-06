@@ -71,28 +71,73 @@ if (opts$type == 'illumina') {
 } else if (opts$type == 'pacbio') {
   opts$type <- 'PacBio'
 }
+# Set your input template and exact target output paths
+rmd_template_path <- file.path(scriptdir, "faster-report.Rmd")
+tmp_md             <- file.path(calldir, "faster-report.knit.md")
+final_output       <- file.path(calldir, opts$outfile)
 
- Copy the Rmd file from the read-only script dir to your writable work dir
-local_rmd <- file.path(calldir, "faster-report.Rmd")
-file.copy(from = file.path(scriptdir, "faster-report.Rmd"), to = local_rmd, overwrite = TRUE)
-
-# render the rmarkdown, using fastq-report.Rmd as template
-rmarkdown::render(input = local_rmd,
-                  output_file = opts$outfile,
-                  #output_dir = calldir, # important when knitting in docker
-                  #intermediates_dir = calldir, # important when knitting in docker
-                  #knit_root_dir = calldir, # important when knitting in docker
-                  #envir = new.env(),
-                  params = list(
-                    fastq_dir = fastqpath,
-                    fastq_pattern = opts$regex,
-                    sequencer = opts$type,
-                    rundate = opts$rundate,
-                    flowcell = opts$flowcell,
-                    basecall = opts$basecall,
-                    user = opts$user,
-                    rawdata = opts$save_raw,
-                    subsample = opts$subsample,
-                    git_commit = opts$git_commit
-                  )
+# 2. Re-create your parameters environment
+# This allows your Rmd file to use 'params$variable' exactly as it did before
+knit_env <- new.env(parent = globalenv())
+knit_env$params <- list(
+  fastq_dir     = fastqpath,
+  fastq_pattern = opts$regex,
+  sequencer     = opts$type,
+  rundate       = opts$rundate,
+  flowcell      = opts$flowcell,
+  basecall      = opts$basecall,
+  user          = opts$user,
+  rawdata       = opts$save_raw,
+  subsample     = opts$subsample,
+  git_commit    = opts$git_commit
 )
+
+# ==========================================
+# STAGE 1: Process code chunks & knit to MD
+# ==========================================
+# We explicitly define 'output = tmp_md' to force it into the writable calldir
+knitr::knit(
+  input = rmd_template_path, 
+  output = tmp_md, 
+  envir = knit_env
+)
+
+# ==========================================
+# STAGE 2: Convert MD to final report format
+# ==========================================
+# This reads the newly created markdown file and exports the finished document
+rmarkdown::pandoc_convert(
+  input = tmp_md, 
+  to = "html", # 
+  output = final_output, 
+  options = c("--self-contained") # Keeps images/styles embedded inside one file
+)
+
+# Clean up the intermediate file in your directory
+if (file.exists(tmp_md)) {
+  file.remove(tmp_md)
+}
+#  Copy the Rmd file from the read-only script dir to your writable work dir
+# local_rmd <- file.path(calldir, "faster-report.Rmd")
+# file.copy(from = file.path(scriptdir, "faster-report.Rmd"), to = local_rmd, overwrite = TRUE)
+
+# # render the rmarkdown, using fastq-report.Rmd as template
+# rmarkdown::render(input = local_rmd,
+#                   output_file = opts$outfile,
+#                   #output_dir = calldir, # important when knitting in docker
+#                   #intermediates_dir = calldir, # important when knitting in docker
+#                   #knit_root_dir = calldir, # important when knitting in docker
+#                   #envir = new.env(),
+#                   params = list(
+#                     fastq_dir = fastqpath,
+#                     fastq_pattern = opts$regex,
+#                     sequencer = opts$type,
+#                     rundate = opts$rundate,
+#                     flowcell = opts$flowcell,
+#                     basecall = opts$basecall,
+#                     user = opts$user,
+#                     rawdata = opts$save_raw,
+#                     subsample = opts$subsample,
+#                     git_commit = opts$git_commit
+#                   )
+# )
