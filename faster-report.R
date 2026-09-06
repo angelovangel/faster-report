@@ -24,6 +24,7 @@ require(parallel) # may be ships with R, so not in the environment.yml
 require(parallelMap)
 #require(renv)
 
+
 # 1. Parse command-line arguments
 option_list <- list(
   make_option(c('--path', '-p'), help = 'path to folder with fastq files', type = 'character', default = NULL),
@@ -56,14 +57,37 @@ if (opts$type == 'illumina') {
 }
 
 # =========================================================================
-# THE GUARANTEED SINGULARITY REWRITE FIX:
-# Read the source Rmd text and physically write a fresh local copy.
-# This forces R to treat the workspace as its home instead of the read-only layer.
+# 3. UNIVERSAL LOGIC: Track down where the execution binaries live
 # =========================================================================
-local_writable_rmd <- "local-execution-report.Rmd"
-writeLines(readLines("faster-report.Rmd"), local_writable_rmd)
+initial_args <- commandArgs(trailingOnly = FALSE)
+file_arg <- initial_args[grep("--file=", initial_args)]
 
-# 3. Render the report safely inside the current writable workspace folder
+if (length(file_arg) > 0) {
+  # Resolved script home directory (works on both Docker paths and Singularity mappings)
+  script_dir <- dirname(sub("--file=", "", file_arg))
+} else {
+  script_dir <- getwd()
+}
+
+template_filename <- "faster-report.Rmd"
+target_source_path <- file.path(script_dir, template_filename)
+
+# Fallback: if the combined directory search fails, assume it's right in the working folder
+if (!file.exists(target_source_path)) {
+  target_source_path <- template_filename
+}
+
+# Read text lines and generate an isolated workspace copy to drop Singularity read-only bugs
+local_writable_rmd <- "local-execution-report.Rmd"
+writeLines(readLines(target_source_path), local_writable_rmd)
+
+# =========================================================================
+# 4. EXPOSE THE CODE DIRECTORY: Pass script_dir directly to the Rmd scope
+# =========================================================================
+# By setting this globally, you can adjust the execution target paths safely
+.GlobalEnv$pipeline_bin_dir <- script_dir
+
+# Render the report safely inside the current writable workspace folder
 rmarkdown::render(
   input              = local_writable_rmd, 
   output_file        = opts$outfile,
@@ -86,4 +110,3 @@ rmarkdown::render(
 
 # Clean up our generated local file
 if (file.exists(local_writable_rmd)) file.remove(local_writable_rmd)
-if (file.exists("local-execution-report.knit.md")) file.remove("local-execution-report.knit.md")

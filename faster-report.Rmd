@@ -86,7 +86,9 @@ knitr::opts_chunk$set(
 
 # important to use the sourced functions in parallel effectively
 # https://stackoverflow.com/questions/16028671/why-does-sourcing-a-script-within-rs-parallel-functions-fail
-parallelMap::parallelSource("bin/global.R")
+# parallelMap::parallelSource("bin/global.R")
+bin_base <- if (exists("pipeline_bin_dir", envir = .GlobalEnv)) .GlobalEnv$pipeline_bin_dir else "."
+parallelMap::parallelSource(file.path(bin_base, "bin", "global.R"))
 
 fastqdir <- normalizePath(params$fastq_dir)
 fastqfiles <- list.files(fastqdir, pattern = params$fastq_pattern, full.names = TRUE, recursive = T)
