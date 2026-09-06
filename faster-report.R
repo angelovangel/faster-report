@@ -76,6 +76,11 @@ rmd_template_path <- file.path(scriptdir, "faster-report.Rmd")
 tmp_md             <- file.path(calldir, "faster-report.knit.md")
 final_output       <- file.path(calldir, opts$outfile)
 
+# 2. Force knitr to handle all internal evaluations inside your writable folder
+# This drops Singularity's locks entirely
+knitr::opts_knit$set(root.dir = calldir)
+
+
 # 2. Re-create your parameters environment
 # This allows your Rmd file to use 'params$variable' exactly as it did before
 knit_env <- new.env(parent = globalenv())
