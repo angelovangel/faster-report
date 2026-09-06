@@ -79,9 +79,9 @@ file.copy(from = file.path(scriptdir, "faster-report.Rmd"), to = local_rmd, over
 # render the rmarkdown, using fastq-report.Rmd as template
 rmarkdown::render(input = local_rmd,
                   output_file = opts$outfile,
-                  output_dir = calldir, # important when knitting in docker
-                  intermediates_dir = calldir, # important when knitting in docker
-                  knit_root_dir = calldir, # important when knitting in docker
+                  #output_dir = calldir, # important when knitting in docker
+                  #intermediates_dir = calldir, # important when knitting in docker
+                  #knit_root_dir = calldir, # important when knitting in docker
                   #envir = new.env(),
                   params = list(
                     fastq_dir = fastqpath,
