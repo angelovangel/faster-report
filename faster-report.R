@@ -26,7 +26,7 @@ require(parallelMap)
 
 calldir <- getwd()
 scriptdir  <-  dirname(funr::sys.script())
-setwd(scriptdir)
+#setwd(scriptdir)
 #renv::load()
 
 option_list <- list(
@@ -72,15 +72,16 @@ if (opts$type == 'illumina') {
   opts$type <- 'PacBio'
 }
 
-# 1. Copy the template to the current writable working directory
-local_rmd <- "./faster-report.Rmd"
-file.copy(from = "faster-report.Rmd", to = local_rmd, overwrite = TRUE)
+ Copy the Rmd file from the read-only script dir to your writable work dir
+local_rmd <- file.path(calldir, "faster-report.Rmd")
+file.copy(from = file.path(scriptdir, "faster-report.Rmd"), to = local_rmd, overwrite = TRUE)
+
 # render the rmarkdown, using fastq-report.Rmd as template
 rmarkdown::render(input = local_rmd,
                   output_file = opts$outfile,
                   output_dir = calldir, # important when knitting in docker
                   intermediates_dir = calldir, # important when knitting in docker
-                  knit_root_dir = scriptdir, # important when knitting in docker
+                  knit_root_dir = calldir, # important when knitting in docker
                   #envir = new.env(),
                   params = list(
                     fastq_dir = fastqpath,
