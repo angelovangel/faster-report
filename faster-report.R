@@ -72,8 +72,11 @@ if (opts$type == 'illumina') {
   opts$type <- 'PacBio'
 }
 
+# 1. Copy the template to the current writable working directory
+local_rmd <- "./faster-report.Rmd"
+file.copy(from = "faster-report.Rmd", to = local_rmd, overwrite = TRUE)
 # render the rmarkdown, using fastq-report.Rmd as template
-rmarkdown::render(input = "faster-report.Rmd",
+rmarkdown::render(input = local_rmd,
                   output_file = opts$outfile,
                   output_dir = calldir, # important when knitting in docker
                   intermediates_dir = calldir, # important when knitting in docker
