@@ -25,7 +25,7 @@ require(parallelMap)
 #require(renv)
 
 calldir <- getwd()
-scriptdir  <-  dirname(funr::sys.script())
+#scriptdir  <-  dirname(funr::sys.script())
 #setwd(scriptdir)
 #renv::load()
 
@@ -72,7 +72,7 @@ if (opts$type == 'illumina') {
   opts$type <- 'PacBio'
 }
 # Set your input template and exact target output paths
-rmd_template_path <- file.path(scriptdir, "faster-report.Rmd")
+rmd_template_path <- file.path("faster-report.Rmd")
 tmp_md             <- file.path(calldir, "faster-report.knit.md")
 final_output       <- file.path(calldir, opts$outfile)
 
