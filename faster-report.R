@@ -37,7 +37,9 @@ option_list <- list(
   make_option(c('--save_raw', '-s'), help = 'save raw csv data used for plotting', type = 'logical', default = FALSE),
   make_option(c('--subsample', '-x'), help = 'subsample reads for kmers calculation', type = 'double', default = 1.0),
   make_option(c('--outfile','-o'), help = 'name of output report file', type = 'character', default = 'faster-report.html'),
-  make_option(c('--git_commit', '-g'), help = 'git commit hash to display in report', type = 'character', default = 'NA')
+  make_option(c('--git_commit', '-g'), help = 'git commit hash to display in report', type = 'character', default = 'NA'),
+  make_option(c('--simulate_gel', '-e'), help = 'simulate gel electrophoresis', type = 'logical', default = FALSE),
+  make_option(c('--invert_gel', '-i'), help = 'invert gel to white background and dark DNA', type = 'logical', default = FALSE)
 )
 
 opts <- parse_args(OptionParser(option_list = option_list))
@@ -87,6 +89,9 @@ writeLines(readLines(target_source_path), local_writable_rmd)
 # By setting this globally, you can adjust the execution target paths safely
 .GlobalEnv$pipeline_bin_dir <- script_dir
 
+# Add the bin directory to the PATH so that system calls can find scripts inside it
+Sys.setenv(PATH = paste(file.path(script_dir, "bin"), Sys.getenv("PATH"), sep=":"))
+
 # Render the report safely inside the current writable workspace folder
 rmarkdown::render(
   input              = local_writable_rmd, 
@@ -104,7 +109,9 @@ rmarkdown::render(
     user          = opts$user,
     rawdata       = opts$save_raw,
     subsample     = opts$subsample,
-    git_commit    = opts$git_commit
+    git_commit    = opts$git_commit,
+    simulate_gel  = opts$simulate_gel,
+    invert_gel    = opts$invert_gel
   )
 )
 

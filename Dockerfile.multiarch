@@ -44,6 +44,7 @@ LABEL description="Docker image containing the requirements for faster-report"
 
 RUN apt-get update && apt-get install -y \
     pandoc nano ksh procps libxt-dev libssl-dev libxml2-dev libfontconfig1-dev \
+    python3 python3-numpy python3-matplotlib \
     && rm -rf /var/lib/apt/lists/*
 # libxt-dev is required to solve the segfault error caused by cairoVersion() in R
 

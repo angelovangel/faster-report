@@ -57,6 +57,14 @@ params:
   label: "Git commit hash"
   value: "NA"
   input: text
+ simulate_gel:
+  label: "Simulate gel electrophoresis"
+  value: FALSE
+  input: checkbox
+ invert_gel:
+  label: "Invert gel (white background)"
+  value: FALSE
+  input: checkbox
 ---
 <style type="text/css">
 .main-container {
@@ -638,6 +646,36 @@ gc_df %>%
 ```
 
 
+
+```{r simulate_gel, include=TRUE, results='asis', eval=params$simulate_gel}
+cat("<hr style='margin-top: 2rem; border-color: #ddd;'>\n")
+cat("<h3>Simulated Gel</h3>\n")
+gel_html_path <- "gel_simulation.html"
+simulate_script <- file.path(bin_base, "bin", "simulate-gel.py")
+if (file.exists(simulate_script)) {
+  args <- c(simulate_script, fastqfiles, "-o", gel_html_path, "--format", "html", "--theme", "chemidoc", "--lane-gap", "6")
+  if (params$invert_gel) {
+    args <- c(args, "--invert")
+  }
+  system2("python3", args = args)
+  
+  if (file.exists(gel_html_path)) {
+    html_content <- paste(readLines(gel_html_path, warn = FALSE), collapse = "\n")
+    print(htmltools::tagList(
+      htmltools::tags$iframe(
+        srcdoc = html_content,
+        width = "80%",
+        height = "1100px",
+        style = "border:none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+      )
+    ))
+  } else {
+    cat("<p>Gel simulation failed to produce output.</p>\n")
+  }
+} else {
+  cat("<p>Gel simulation script not found.</p>\n")
+}
+```
 
 ```{r cleanup, include = FALSE}
 if (dir.exists('subsampled')) {
