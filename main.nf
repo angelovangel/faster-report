@@ -66,7 +66,7 @@ process CONVERT_READS {
 
     script:
     """
-    samtools fastq -@ ${task.cpus} -T '*' ${reads} > ${reads.simpleName}.fastq
+    samtools fastq -@ ${task.cpus} -t -T '*' ${reads} > ${reads.simpleName}.fastq
     """
 
 }
@@ -121,6 +121,13 @@ process FASTER_REPORT {
     def saveraw     = params.save_raw ? "-s TRUE" : ''
     def simulate    = params.simgel   ? "-e TRUE" : ''
     """
+    # Bring the css into Nextflow's isolated working directory
+    cp /temp/custom.css ./custom.css 2>/dev/null
+    
+    # Stage the www directory and its PNG files
+    mkdir -p www
+    cp -r /temp/www/*.png ./www/ 2>/dev/null
+
     /temp/faster-report.R \\
         -p . \\
         -r '\\.(fastq|fq|fasta|bam)(\\.gz)?\$' \\
@@ -141,8 +148,7 @@ pattern = "*.{bam,fasta,fastq,fastq.gz,fq,fq.gz}"
 ch_files = Channel.fromPath(params.reads + "/" + pattern, type: 'file', checkIfExists: true) 
 
 workflow {
-    // Branch reads into BAM and others for centralized conversion
-    //ch_reads = Channel.fromPath(params.reads, type: 'dir', checkIfExists: true)
+    // 1. Branch files to convert BAMs to FASTQ for the downstream R reporting app
     ch_files
         .branch {
             bam: it.name.endsWith('.bam')
@@ -154,12 +160,37 @@ workflow {
         .mix(ch_reads_split.other)
         .collect()
 
-    //ch_fastq.view()
-    //fastq_ch = Channel.fromPath(params.reads, type: 'dir', checkIfExists: true)
-
-    header_ch = GET_HEADER_DATA(ch_fastq)
+    // 2. FIX: Feed the original raw channel (which still contains untouched BAMs) 
+    // into GET_HEADER_DATA instead of the converted ch_fastq stream.
+    ch_raw_files = ch_files.collect()
+    header_ch = GET_HEADER_DATA(ch_raw_files)
         .splitCsv()
         .map { row -> tuple(row[0], row[1], row[2], row[3]) }
-    //header_ch.view()
+
+    // 3. Pass the converted fastq streams and extracted header tuple to the report engine
     FASTER_REPORT(ch_fastq, header_ch)
 }
+
+// workflow {
+//     // Branch reads into BAM and others for centralized conversion
+//     //ch_reads = Channel.fromPath(params.reads, type: 'dir', checkIfExists: true)
+//     ch_files
+//         .branch {
+//             bam: it.name.endsWith('.bam')
+//             other: true
+//         }
+//         .set { ch_reads_split }
+
+//     ch_fastq = CONVERT_READS(ch_reads_split.bam)
+//         .mix(ch_reads_split.other)
+//         .collect()
+
+//     //ch_fastq.view()
+//     //fastq_ch = Channel.fromPath(params.reads, type: 'dir', checkIfExists: true)
+
+//     header_ch = GET_HEADER_DATA(ch_fastq)
+//         .splitCsv()
+//         .map { row -> tuple(row[0], row[1], row[2], row[3]) }
+//     //header_ch.view()
+//     FASTER_REPORT(ch_fastq, header_ch)
+// }
