@@ -119,6 +119,7 @@ process FASTER_REPORT {
     def basecallOpt = basecall ? "-b '${basecall}'" : ''
     def user        = params.user     ? "-u '${params.user}'" : ''
     def saveraw     = params.save_raw ? "-s TRUE" : ''
+    def simulate    = params.simgel   ? "-e TRUE" : ''
     """
     /temp/faster-report.R \\
         -p . \\
@@ -129,6 +130,7 @@ process FASTER_REPORT {
         ${basecallOpt} \\
         ${user} \\
         ${saveraw} \\
+        ${simulate} \\
         -x ${params.subsample} \\
         --git_commit ${git_commit} \\
         -o ${params.outfile}

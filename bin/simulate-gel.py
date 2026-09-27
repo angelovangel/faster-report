@@ -176,11 +176,20 @@ def profile_from_lengths(lengths, min_bp, max_bp, y_top, y_bot, n_pixels,
                          band_sigma=3.2, smear_sigma=20.0):
     """Build an intensity profile from read lengths with adaptive smoothing:
     sharp bands for concentrated peaks, broad continuous smear for dispersed fragments.
+
+    Fragments larger than max_bp are too big to migrate into the gel matrix, so
+    rather than discarding them they're reported back as `well_frac`: the share
+    of the sample's total dye-weighted mass that stays trapped in the loading
+    well. The caller renders that as a retained band in the pocket itself.
     """
     lengths = np.asarray(lengths, dtype=float)
+    total_mass = lengths.sum() if lengths.size else 0.0
+    oversized_mass = lengths[lengths > max_bp].sum() if lengths.size else 0.0
+    well_frac = (oversized_mass / total_mass) if total_mass > 0 else 0.0
+
     lengths = lengths[(lengths >= min_bp) & (lengths <= max_bp)]
     if len(lengths) == 0:
-        return np.zeros(n_pixels)
+        return np.zeros(n_pixels), well_frac
 
     n_reads = len(lengths)
     ys = bp_to_y(lengths, min_bp, max_bp, y_top, y_bot)
@@ -204,8 +213,14 @@ def profile_from_lengths(lengths, min_bp, max_bp, y_top, y_bot, n_pixels,
         profile = profile / profile.max()
         # Soft photographic gamma: preserves subtle library smear
         profile = profile ** 0.55
+        # Conserve total dye signal between the well and the gel: only the
+        # (1 - well_frac) share of mass actually migrated, so that's the most
+        # the in-gel bands should ever read as, however bright they'd look
+        # in isolation. Without this, a lane that's 90% oversized DNA would
+        # still show a full-brightness band from its leftover 10%.
+        profile = profile * (1.0 - well_frac)
 
-    return profile
+    return profile, well_frac
 
 
 def ladder_profile(ladder_bands, min_bp, max_bp, y_top, y_bot, n_pixels, ladder_sigma=2.6):
@@ -272,12 +287,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
   .title-group h1 {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 600;
     letter-spacing: -0.01em;
   }
   .title-group p {
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     color: rgba(255, 255, 255, 0.6);
     margin-top: 4px;
   }
@@ -291,7 +306,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     border: 1px solid var(--border-color);
     color: var(--text-color);
     padding: 6px 14px;
-    font-size: 0.82rem;
+    font-size: 0.7rem;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -308,7 +323,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     border: 1px solid var(--border-color);
     border-radius: 4px;
     padding: 2px 8px;
-    font-size: 0.75rem;
+    font-size: 0.64rem;
     color: var(--accent-color);
   }
   .panels-container {
@@ -367,7 +382,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 8px 12px;
-    font-size: 0.82rem;
+    font-size: 0.7rem;
     color: var(--text-color);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 10px rgba(94, 230, 115, 0.15);
     z-index: 1000;
@@ -401,13 +416,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     opacity: 1;
   }
   .tt-size {
-    font-size: 1.05rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: var(--accent-color);
     margin-bottom: 2px;
   }
   .tt-detail {
-    font-size: 0.78rem;
+    font-size: 0.66rem;
     color: rgba(255, 255, 255, 0.75);
     display: flex;
     gap: 8px;
@@ -418,13 +433,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     color: #ffffff;
   }
   .tt-closest {
-    font-size: 0.74rem;
+    font-size: 0.63rem;
     color: rgba(255, 255, 255, 0.5);
     margin-top: 3px;
   }
   footer {
     margin-top: 30px;
-    font-size: 0.75rem;
+    font-size: 0.64rem;
     color: rgba(255, 255, 255, 0.4);
     text-align: center;
   }
@@ -529,7 +544,7 @@ panels.forEach((p, pIdx) => {
       .attr("y", 28)
       .attr("text-anchor", "middle")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 24)
+      .attr("font-size", 17)
       .attr("font-weight", "bold")
       .attr("font-family", "sans-serif")
       .text(p.panel_title);
@@ -581,7 +596,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "end")
       .attr("dominant-baseline", "central")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 18)
+      .attr("font-size", 13)
       .attr("font-weight", "600")
       .attr("font-family", "sans-serif")
       .text(lm.label);
@@ -595,7 +610,7 @@ panels.forEach((p, pIdx) => {
       .attr("y", p.y_well - 15)
       .attr("text-anchor", "middle")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 22)
+      .attr("font-size", 15)
       .attr("font-weight", "bold")
       .attr("font-family", "sans-serif")
       .attr("opacity", 0.95)
@@ -607,7 +622,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "hanging")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 22)
+      .attr("font-size", 15)
       .attr("font-weight", "bold")
       .attr("font-family", "sans-serif")
       .attr("opacity", 0.9)
@@ -639,7 +654,7 @@ panels.forEach((p, pIdx) => {
     .attr("y", cardY + 28)
     .attr("dominant-baseline", "central")
     .attr("fill", p.theme.text_color)
-    .attr("font-size", 18)
+    .attr("font-size", 12)
     .attr("font-weight", "bold")
     .attr("font-family", "sans-serif")
     .attr("opacity", 0.7)
@@ -668,7 +683,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "end")
       .attr("dominant-baseline", "central")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 20)
+      .attr("font-size", 14)
       .attr("font-weight", "bold")
       .attr("font-family", "sans-serif")
       .text(entry.lane_num);
@@ -679,7 +694,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 20)
+      .attr("font-size", 14)
       .attr("opacity", 0.75)
       .text("-");
 
@@ -689,7 +704,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "start")
       .attr("dominant-baseline", "central")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 20)
+      .attr("font-size", 14)
       .attr("font-family", "sans-serif")
       .attr("opacity", 0.98)
       .text(entry.name);
@@ -711,11 +726,12 @@ panels.forEach((p, pIdx) => {
     .attr("x1", 0)
     .attr("x2", p.gel_w);
 
-  // Badge on the left of crosshair showing size (positioned above the line)
+  // Badge on the left of crosshair showing size (positioned above the line,
+  // with a small gap so the box doesn't touch the crosshair itself)
   const badgeG = crosshairG.append("g").attr("class", "crosshair-badge");
   badgeG.append("rect")
     .attr("x", 4)
-    .attr("y", -28)
+    .attr("y", -38)
     .attr("width", 90)
     .attr("height", 28)
     .attr("rx", 5)
@@ -726,11 +742,11 @@ panels.forEach((p, pIdx) => {
 
   const badgeText = badgeG.append("text")
     .attr("x", 49)
-    .attr("y", -14)
+    .attr("y", -24)
     .attr("text-anchor", "middle")
     .attr("dominant-baseline", "central")
     .attr("fill", p.theme.accent_color)
-    .attr("font-size", 16)
+    .attr("font-size", 13)
     .attr("font-weight", "bold")
     .attr("font-family", "sans-serif");
 
@@ -757,7 +773,7 @@ panels.forEach((p, pIdx) => {
   overlay
     .on("mouseenter", () => {
       crosshairG.style("display", null);
-      tooltip.classList.add("visible");
+      tooltip.classList.add("visible", "above");
     })
     .on("mouseleave", () => {
       crosshairG.style("display", "none");
@@ -796,6 +812,13 @@ panels.forEach((p, pIdx) => {
       ttBp.textContent = `(${bp.toLocaleString()} bp)`;
       ttLane.textContent = activeLane ? (activeLane.is_ladder ? "Ladder Lane" : `Lane ${activeLane.lane_num}: ${activeLane.name}`) : "Gel Slab";
       ttClosest.textContent = `Ladder reference: ${closest ? closest.label : "--"} (${diffStr})`;
+
+      // Flip the tooltip below the cursor when there isn't room above it,
+      // so the arrow direction (and its border-color, which only .above/.below
+      // define) always matches where the tooltip actually renders.
+      const showBelow = event.clientY < 140;
+      tooltip.classList.toggle("above", !showBelow);
+      tooltip.classList.toggle("below", showBelow);
 
       tooltip.style.left = `${event.clientX}px`;
       tooltip.style.top = `${event.clientY}px`;
@@ -845,7 +868,7 @@ panels.forEach((p, pIdx) => {
         .attr("text-anchor", "middle")
         .attr("dominant-baseline", "central")
         .attr("fill", "#ffda6b")
-        .attr("font-size", 16)
+        .attr("font-size", 13)
         .attr("font-weight", "bold")
         .attr("font-family", "sans-serif")
         .text(`📌 ${formatted}`);
@@ -883,7 +906,8 @@ def synthesize_gel(ladder_name, ladder_bands, samples_chunk, samples_per_gel,
     y_well = int(round(gel_h * (65.0 / 880.0)))
     well_h = int(round(gel_h * (16.0 / 880.0)))
     well_w = int(lane_width * 0.76)
-    y_top = y_well + well_h + 8
+    well_gap = max(1, int(round(gel_h * (8.0 / 880.0))))
+    y_top = y_well + well_h + well_gap
     y_bot = gel_h - int(round(gel_h * (45.0 / 880.0)))
 
     # Background illumination vignette + agarose matrix speckle
@@ -906,20 +930,20 @@ def synthesize_gel(ladder_name, ladder_bands, samples_chunk, samples_per_gel,
 
     # Assemble lanes
     ladder_prof = ladder_profile(ladder_bands, min_bp, max_bp, y_top, y_bot, gel_h, ladder_sigma)
-    all_lanes = [(f"{ladder_name} ladder", ladder_prof, False, False)]
+    all_lanes = [(f"{ladder_name} ladder", ladder_prof, False, False, 0.0)]
 
     for path, lengths in samples_chunk:
-        prof = profile_from_lengths(lengths, min_bp, max_bp, y_top, y_bot, gel_h, band_sigma, smear_sigma)
-        all_lanes.append((clean_sample_name(path), prof, True, False))
+        prof, well_frac = profile_from_lengths(lengths, min_bp, max_bp, y_top, y_bot, gel_h, band_sigma, smear_sigma)
+        all_lanes.append((clean_sample_name(path), prof, True, False, well_frac))
 
     # Pad to fixed comb capacity if needed
     while len(all_lanes) - 1 < samples_per_gel:
-        all_lanes.append(("", np.zeros(gel_h), False, True))
+        all_lanes.append(("", np.zeros(gel_h), False, True, 0.0))
 
     lane_centers = []
     y_indices = np.arange(gel_h, dtype=float)
 
-    for i, (name, prof, is_sample, is_empty) in enumerate(all_lanes):
+    for i, (name, prof, is_sample, is_empty, well_frac) in enumerate(all_lanes):
         x_start = margin_left + i * (lane_width + lane_gap)
         x_center = x_start + lane_width / 2.0
         lane_centers.append(x_center)
@@ -938,6 +962,34 @@ def synthesize_gel(ladder_name, ladder_bands, samples_chunk, samples_per_gel,
         # Well loading line (residual dye for loaded samples)
         if is_sample and np.max(prof) > 0.1:
             gel_img[w_y1 - 1:w_y1 + 1, w_x0 + 2:w_x1 - 2] += 0.06
+
+        # Fragments bigger than max_bp never entered the gel — they stay
+        # trapped in the well pocket as a retained band. Brightness scales
+        # with how much of the sample's mass was too large to migrate; shape
+        # follows the same horizontal meniscus and grain as an in-gel band,
+        # concentrated toward the bottom of the well (closest to the gel
+        # interface it couldn't cross) rather than filling it as a flat block.
+        if is_sample and well_frac > 0.0:
+            peak_glow = 0.92 * (np.clip(well_frac, 0.0, 1.0) ** 0.55)
+
+            x_local = np.arange(w_x0, w_x1) - x_center
+            h_prof = np.exp(-(np.abs(x_local) / (well_w / 2.0 * 0.88)) ** 6)
+
+            y_local = np.arange(w_y0, w_y1) - w_y0
+            v_prof = (0.35 + 0.65 * y_local / max(1, well_h - 1)) ** 1.4
+
+            band = peak_glow * np.outer(v_prof, h_prof)
+            band += rng.normal(0, 0.012 * peak_glow, band.shape)
+            gel_img[w_y0:w_y1, w_x0:w_x1] += band
+
+            # Faint diffuse leading edge: the smallest of the oversized
+            # fragments start creeping toward the gel before stalling,
+            # softening the boundary between well and slab.
+            bleed_h = max(1, min(y_top - w_y1 - 1, well_h // 3))
+            if bleed_h > 0:
+                fade = np.linspace(1.0, 0.0, bleed_h) ** 1.5
+                bleed = (peak_glow * 0.3 * h_prof)[None, :] * fade[:, None]
+                gel_img[w_y1:w_y1 + bleed_h, w_x0:w_x1] += bleed
 
         if is_empty or np.max(prof) == 0:
             continue
@@ -992,22 +1044,22 @@ def render_panel(ax, ladder_name, ladder_bands, samples_chunk, samples_per_gel,
         ax.plot([ladder_xc - lane_width / 2.0 - 14, ladder_xc - lane_width / 2.0 - 4], [y, y],
                 color=theme["text_color"], lw=0.9, alpha=0.8)
         ax.text(ladder_xc - lane_width / 2.0 - 18, y, label,
-                color=theme["text_color"], fontsize=18.0, ha="right", va="center",
+                color=theme["text_color"], fontsize=13.0, ha="right", va="center",
                 fontfamily="sans-serif", fontweight="semibold")
 
     # Lane numbers above wells and below gel slab
     for i, xc in enumerate(lane_centers):
         lane_str = str(i + 1)
         ax.text(xc, y_well - 15, lane_str, color=theme["text_color"],
-                fontsize=22.0, fontweight="bold", ha="center", va="bottom",
+                fontsize=15.0, fontweight="bold", ha="center", va="bottom",
                 fontfamily="sans-serif", alpha=0.95)
         ax.text(xc, gel_h + 24, lane_str, color=theme["text_color"],
-                fontsize=22.0, fontweight="bold", ha="center", va="top",
+                fontsize=15.0, fontweight="bold", ha="center", va="top",
                 fontfamily="sans-serif", alpha=0.9)
 
     # Legend on the right: "number - sample name"
     legend_entries = []
-    for i, (name, _, _, is_empty) in enumerate(all_lanes):
+    for i, (name, _, _, is_empty, _) in enumerate(all_lanes):
         if not is_empty and name:
             legend_entries.append((i + 1, name))
 
@@ -1032,7 +1084,7 @@ def render_panel(ax, ladder_name, ladder_bands, samples_chunk, samples_per_gel,
 
         # Header
         ax.text(card_x + 20, y_start + 28, "LANES", color=theme["text_color"],
-                fontsize=18.0, fontweight="bold", fontfamily="sans-serif",
+                fontsize=12.0, fontweight="bold", fontfamily="sans-serif",
                 alpha=0.7, va="center", zorder=4)
 
         # Divider line
@@ -1043,13 +1095,13 @@ def render_panel(ax, ladder_name, ladder_bands, samples_chunk, samples_per_gel,
         for idx, (lane_num, sname) in enumerate(legend_entries):
             y_pos = y_start + 72 + idx * line_spacing
             ax.text(card_x + 36, y_pos, str(lane_num), color=theme["text_color"],
-                    fontsize=20.0, fontweight="bold", fontfamily="sans-serif",
+                    fontsize=14.0, fontweight="bold", fontfamily="sans-serif",
                     ha="right", va="center", zorder=4)
             ax.text(card_x + 48, y_pos, "-", color=theme["text_color"],
-                    fontsize=20.0, fontweight="normal", fontfamily="sans-serif",
+                    fontsize=14.0, fontweight="normal", fontfamily="sans-serif",
                     ha="center", va="center", alpha=0.75, zorder=4)
             ax.text(card_x + 62, y_pos, sname, color=theme["text_color"],
-                    fontsize=20.0, fontweight="normal", fontfamily="sans-serif",
+                    fontsize=14.0, fontweight="normal", fontfamily="sans-serif",
                     ha="left", va="center", zorder=4, alpha=0.98)
 
     total_w = gel_w + legend_w
@@ -1059,7 +1111,7 @@ def render_panel(ax, ladder_name, ladder_bands, samples_chunk, samples_per_gel,
 
     if panel_title:
         ax.text(gel_w / 2.0, -18, panel_title, color=theme["text_color"],
-                fontsize=24.0, ha="center", va="bottom",
+                fontsize=17.0, ha="center", va="bottom",
                 fontfamily="sans-serif", fontweight="bold")
 
     return total_w
@@ -1098,7 +1150,7 @@ def build_panel_d3_data(ladder_name, ladder_bands, samples_chunk, samples_per_ge
     # Lanes metadata
     lanes_data = []
     legend_entries = []
-    for i, (name, _, is_sample, is_empty) in enumerate(all_lanes):
+    for i, (name, _, is_sample, is_empty, _) in enumerate(all_lanes):
         xc = lane_centers[i]
         lanes_data.append({
             "lane_num": i + 1,
@@ -1143,7 +1195,7 @@ def build_panel_d3_data(ladder_name, ladder_bands, samples_chunk, samples_per_ge
 def render_html(panels_data, out_path, title=None):
     """Render interactive D3 HTML document."""
     theme = panels_data[0]["theme"]
-    doc_title = title or "Interactive Agarose Gel Electrophoresis"
+    doc_title = title or ""
     panels_json = json.dumps(panels_data)
 
     content = HTML_TEMPLATE
@@ -1298,7 +1350,7 @@ def main():
                         help="Pad single gel to full comb width with empty wells (default: compact width)")
     parser.add_argument("--min-bp", type=float, default=100, help="Smallest fragment size shown (default: 100)")
     parser.add_argument("--max-bp", type=float, default=12000, help="Largest fragment size shown (default: 12000)")
-    parser.add_argument("--pixels", type=int, default=880, help="Vertical resolution of each gel (default: 880)")
+    parser.add_argument("--pixels", type=int, default=680, help="Vertical resolution of each gel (default: 680)")
     parser.add_argument("--band-sigma", type=float, default=3.2,
                         help="Band sharpness sigma for concentrated amplicon peaks (default: 3.2)")
     parser.add_argument("--smear-sigma", type=float, default=20.0,
@@ -1307,8 +1359,8 @@ def main():
                         help="Ladder band sharpness sigma (default: 2.6)")
     parser.add_argument("--smile", type=float, default=3.2,
                         help="Meniscus smile curvature amplitude in pixels (default: 3.2)")
-    parser.add_argument("--lane-gap", type=int, default=22,
-                        help="Spacing in pixels between sample lanes (default: 22)")
+    parser.add_argument("--lane-gap", type=int, default=15,
+                        help="Spacing in pixels between sample lanes (default: 15)")
     parser.add_argument("--invert", action="store_true",
                         help="Invert colors (white background, dark DNA bands)")
     parser.add_argument("--title", default=None, help="Optional title printed above the gel(s)")
