@@ -1,6 +1,6 @@
 ---
 title: |
-  <img style="float: right;" width="130;" src="www/bcl2.png">  FASTQ report    
+  <img style="float: right;" width="130;" src="www/bcl2.png">  FASTQ/BAM report    
   
 
 output:
@@ -33,6 +33,15 @@ params:
  basecall:
   label: "Basecaller model"
   value: NA
+  input: text
+ filetype:
+  label: "File type"
+  choices: ["fastq", "bam"]
+  value: "fastq"
+  input: select
+ mods:
+  label: "Mods"
+  value: "-"
   input: text
  rundate:
   label: "Run date"
@@ -207,11 +216,13 @@ q20_text <- sprintf("%.2f%%", q20)
 
 <div style="display: flex; gap: 6rem; align-items: flex-start;">
 <table class="meta-table">
+<tr><td class="meta-label">User:</td><td class="meta-value"><b>`r params$user`</b></td></tr>
 <tr><td class="meta-label">Run date:</td><td class="meta-value"><b>`r params$rundate`</b></td></tr>
 <tr><td class="meta-label">Platform:</td><td class="meta-value"><b>`r params$sequencer`</b></td></tr>
 <tr><td class="meta-label">Flow cell:</td><td class="meta-value"><b>`r params$flowcell`</b></td></tr>
 <tr><td class="meta-label">Basecall:</td><td class="meta-value"><b>[`r params$basecall`](https://software-docs.nanoporetech.com/dorado/latest/models/models/)</b></td></tr>
-<tr><td class="meta-label">User:</td><td class="meta-value"><b>`r params$user`</b></td></tr>
+<tr><td class="meta-label">File type:</td><td class="meta-value"><b>`r params$filetype`</b></td></tr>
+
 </table>
 <table class="meta-table">
 <tr><td class="meta-label">Files:</td><td class="meta-value"><b>`r num_files`</b></td></tr>
@@ -219,6 +230,7 @@ q20_text <- sprintf("%.2f%%", q20)
 <tr><td class="meta-label">Bases:</td><td class="meta-value"><b>`r num_bases_text`</b></td></tr>
 <tr><td class="meta-label">Mean Q20:</td><td class="meta-value"><b>`r q20_text`</b></td></tr>
 <tr><td class="meta-label">Mean Q30:</td><td class="meta-value"><b>`r q30_text`</b></td></tr>
+<tr><td class="meta-label">Mods:</td><td class="meta-value"><b>`r params$mods`</b></td></tr>
 </table>
 </div>
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# get run info (platform, flowcell, rundate, basecaller model) from a fastq/fasta/bam file
+# get run info (platform, flowcell, rundate, basecaller model, modifications) from a fastq/fasta/bam file
 # platform is auto-detected as one of: ont, pacbio, illumina, unknown
 #
 # usage: get-header-data.sh <fastq_dir>
@@ -26,9 +26,16 @@ if [[ "$FASTQFILE" =~ \.bam$ ]]; then
     fi
     # Stitch the file's global @RG headers and the first alignment line together 
     HEADER=$(printf "%s\n%s" "$(samtools view -H "$FASTQFILE" | grep '^@RG')" "$(samtools view "$FASTQFILE" | head -n 1)")
+    
+    # Extract modification codes from MM tags (peek at first 1000 reads)
+    MODS=$(samtools view "$FASTQFILE" | head -n 1000 | grep -o "MM:Z:[^[:space:]]*;" | tr ';' '\n' | sed -n 's/.*[+-]\([a-z0-9]\{1,\}\).*/\1/p' | sort -u | paste -sd, -)
+   
+    # Map codes to human readable labels
+    MOD_LABELS=$(echo "$MODS" | tr ',' '\n' | sed 's/^m$/5mC/; s/^h$/5hmC/; s/^a$/6mA/; s/^c$/4mC/' | paste -sd/ -)
 else
     # Standard stream reader for fastq/fasta
     HEADER=$(zcat -f "$FASTQFILE" | head -n 1)
+    MOD_LABELS=""
 fi
 
 if [[ -z "$HEADER" ]]; then
@@ -180,5 +187,12 @@ esac
 FLOWCELL="${FLOWCELL:-NA}"
 RUNDATE="${RUNDATE:-NA}"
 BC_MODEL="${BC_MODEL:-NA}"
+[ -z "$MOD_LABELS" ] && MOD_LABELS="-"
 
-echo "${PLATFORM},${FLOWCELL},${RUNDATE},${BC_MODEL}"
+if [[ "$FASTQFILE" =~ \.bam$ ]]; then
+    FILETYPE="bam"
+else
+    FILETYPE="fastq"
+fi
+
+echo "${PLATFORM},${FLOWCELL},${RUNDATE},${BC_MODEL},${MOD_LABELS},${FILETYPE}"

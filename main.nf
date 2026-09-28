@@ -32,17 +32,19 @@ if (params.help) {
 
      Optional Parameters:
        --type          Sequencing platform used ('illumina', 'ont', or 'pacbio').
-                       If not set, it is auto-detected from the FASTQ headers.
+                       If not set, it is auto-detected from the FASTQ/BAM headers.
        --subsample     Fraction of reads to subsample for html report gc, len, qscore and k-mer calculation (0.1 to 1.0, default: 1.0).
        --outfile       Name of the output HTML report file (default: 'faster-report.html').
        --outdir        Directory where the output report is saved (default: 'output').
        --save_raw      Save raw CSV data used for plotting ('true' or 'false', default: false).
 
-     Metadata Override Options (will override values auto-detected from FASTQ headers):
+     Metadata Override Options (will override values auto-detected from FASTQ/BAM headers):
        --flowcell      Flow cell ID
        --rundate       Run date
        --basecall      Basecaller model
        --user          User name
+       --filetype      Filetype of input files ('fastq' or 'bam')
+       --mods          Modification codes to use for the html report (overwrites the auto-detected from the FASTQ/BAM headers)
 
      Other Options:
        --help          Display this help message.
@@ -94,7 +96,7 @@ process FASTER_REPORT {
 
     input:
     path 'temp/*'
-    tuple val(platform_detected), val(flowcell_detected), val(rundate_detected), val(basecall_detected)
+    tuple val(platform_detected), val(flowcell_detected), val(rundate_detected), val(basecall_detected), val(mods_detected), val(filetype_detected)
 
     output:
     path params.outfile
@@ -113,10 +115,15 @@ process FASTER_REPORT {
     def rundate  = resolve(params.rundate,  rundate_detected,  'NA')
     def flowcell = resolve(params.flowcell, flowcell_detected, 'NA')
     def basecall = resolve(params.basecall, basecall_detected, 'NA')
+    def filetype = resolve(params.filetype, filetype_detected, 'fastq')
+    def mods     = resolve(params.mods,     mods_detected,     "-")
 
     def rundateOpt  = rundate  ? "-d '${rundate}'"  : ''
     def flowcellOpt = flowcell ? "-f '${flowcell}'" : ''
     def basecallOpt = basecall ? "-b '${basecall}'" : ''
+    def modsOpt     = mods     ? "-m '${mods}'"     : ''
+    def filetypeOpt    = filetype ? "-y '${filetype}'" : ''
+
     def user        = params.user     ? "-u '${params.user}'" : ''
     def saveraw     = params.save_raw ? "-s TRUE" : ''
     def simulate    = params.simgel   ? "-e TRUE" : ''
@@ -135,6 +142,8 @@ process FASTER_REPORT {
         ${rundateOpt} \\
         ${flowcellOpt} \\
         ${basecallOpt} \\
+        ${modsOpt} \\
+        ${filetypeOpt} \\
         ${user} \\
         ${saveraw} \\
         ${simulate} \\
@@ -160,12 +169,12 @@ workflow {
         .mix(ch_reads_split.other)
         .collect()
 
-    // 2. FIX: Feed the original raw channel (which still contains untouched BAMs) 
+    // 2. Feed the original raw channel (which still contains untouched BAMs) 
     // into GET_HEADER_DATA instead of the converted ch_fastq stream.
     ch_raw_files = ch_files.collect()
     header_ch = GET_HEADER_DATA(ch_raw_files)
         .splitCsv()
-        .map { row -> tuple(row[0], row[1], row[2], row[3]) }
+        .map { row -> tuple(row[0], row[1], row[2], row[3], row[4], row[5]) }
 
     // 3. Pass the converted fastq streams and extracted header tuple to the report engine
     FASTER_REPORT(ch_fastq, header_ch)
