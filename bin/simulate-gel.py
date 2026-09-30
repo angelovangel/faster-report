@@ -49,7 +49,7 @@ import matplotlib.patches as mpatches
 # ---------------------------------------------------------------------------
 LADDERS = {
     "1kb": [
-        (10000, 0.55), (8000, 0.45), (6000, 0.45), (5000, 0.50),
+        (30000, 0.3),(20000, 0.4), (10000, 0.55), (8000, 0.45), (6000, 0.45), (5000, 0.50),
         (4000, 0.55), (3000, 1.00), (2000, 0.60), (1500, 0.55),
         (1000, 0.85), (500, 0.65),
     ],
@@ -338,9 +338,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   }
   svg.gel-svg {
     display: block;
-    max-width: 100%;
-    max-height: 800px;
-    width: auto;
     height: auto;
   }
   .crosshair-line {
@@ -544,7 +541,7 @@ panels.forEach((p, pIdx) => {
       .attr("y", 28)
       .attr("text-anchor", "middle")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 17)
+      .attr("font-size", 13)
       .attr("font-weight", "bold")
       .attr("font-family", "sans-serif")
       .text(p.panel_title);
@@ -596,7 +593,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "end")
       .attr("dominant-baseline", "central")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 13)
+      .attr("font-size", 10)
       .attr("font-weight", "600")
       .attr("font-family", "sans-serif")
       .text(lm.label);
@@ -610,7 +607,7 @@ panels.forEach((p, pIdx) => {
       .attr("y", p.y_well - 15)
       .attr("text-anchor", "middle")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 15)
+      .attr("font-size", 11)
       .attr("font-weight", "bold")
       .attr("font-family", "sans-serif")
       .attr("opacity", 0.95)
@@ -622,7 +619,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "hanging")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 15)
+      .attr("font-size", 11)
       .attr("font-weight", "bold")
       .attr("font-family", "sans-serif")
       .attr("opacity", 0.9)
@@ -654,7 +651,7 @@ panels.forEach((p, pIdx) => {
     .attr("y", cardY + 28)
     .attr("dominant-baseline", "central")
     .attr("fill", p.theme.text_color)
-    .attr("font-size", 12)
+    .attr("font-size", 10)
     .attr("font-weight", "bold")
     .attr("font-family", "sans-serif")
     .attr("opacity", 0.7)
@@ -683,7 +680,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "end")
       .attr("dominant-baseline", "central")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 14)
+      .attr("font-size", 11)
       .attr("font-weight", "bold")
       .attr("font-family", "sans-serif")
       .text(entry.lane_num);
@@ -694,7 +691,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "central")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 14)
+      .attr("font-size", 11)
       .attr("opacity", 0.75)
       .text("-");
 
@@ -704,7 +701,7 @@ panels.forEach((p, pIdx) => {
       .attr("text-anchor", "start")
       .attr("dominant-baseline", "central")
       .attr("fill", p.theme.text_color)
-      .attr("font-size", 14)
+      .attr("font-size", 11)
       .attr("font-family", "sans-serif")
       .attr("opacity", 0.98)
       .text(entry.name);
@@ -746,7 +743,7 @@ panels.forEach((p, pIdx) => {
     .attr("text-anchor", "middle")
     .attr("dominant-baseline", "central")
     .attr("fill", p.theme.accent_color)
-    .attr("font-size", 13)
+    .attr("font-size", 10)
     .attr("font-weight", "bold")
     .attr("font-family", "sans-serif");
 
@@ -895,7 +892,7 @@ document.getElementById("btn-clear-pins").addEventListener("click", () => {
 def synthesize_gel(ladder_name, ladder_bands, samples_chunk, samples_per_gel,
                    min_bp, max_bp, gel_h, band_sigma, smear_sigma, ladder_sigma, smile_amp, lane_gap=22):
     """Compute physical gel image array and layout geometry."""
-    lane_width = 76
+    lane_width = 56
     margin_left = 90
     margin_right = 35
 
@@ -1238,7 +1235,7 @@ def render(lengths_by_file, ladder_name, out_path, min_bp, max_bp,
     n_panels = len(chunks)
     effective_lanes = samples_per_gel if (n_panels > 1 or pad_single) else len(chunks[0])
 
-    lane_width = 76
+    lane_width = 56
     margin_left = 90
     margin_right = 35
 
@@ -1349,8 +1346,8 @@ def main():
     parser.add_argument("--pad", action="store_true",
                         help="Pad single gel to full comb width with empty wells (default: compact width)")
     parser.add_argument("--min-bp", type=float, default=100, help="Smallest fragment size shown (default: 100)")
-    parser.add_argument("--max-bp", type=float, default=12000, help="Largest fragment size shown (default: 12000)")
-    parser.add_argument("--pixels", type=int, default=680, help="Vertical resolution of each gel (default: 680)")
+    parser.add_argument("--max-bp", type=float, default=32000, help="Largest fragment size shown (default: 32000)")
+    parser.add_argument("--pixels", type=int, default=480, help="Vertical resolution of each gel (default: 480)")
     parser.add_argument("--band-sigma", type=float, default=3.2,
                         help="Band sharpness sigma for concentrated amplicon peaks (default: 3.2)")
     parser.add_argument("--smear-sigma", type=float, default=20.0,
