@@ -36,7 +36,8 @@ if (params.help) {
        --subsample     Fraction of reads to subsample for html report gc, len, qscore and k-mer calculation (0.1 to 1.0, default: 1.0).
        --outfile       Name of the output HTML report file (default: 'faster-report.html').
        --outdir        Directory where the output report is saved (default: 'output').
-       --save_raw      Save raw CSV data used for plotting ('true' or 'false', default: false).
+       --save_raw      Save raw CSV data used for plotting (logical, default: false).
+       --simgel        Simulate gel electrophoresis (logical, default: false)
 
      Metadata Override Options (will override values auto-detected from FASTQ/BAM headers):
        --flowcell      Flow cell ID

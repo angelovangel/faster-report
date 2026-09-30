@@ -1,6 +1,6 @@
 ---
 title: |
-  <img style="float: right;" width="130;" src="www/bcl2.png">  FASTQ/BAM report    
+  <img style="float: right;" width="300;" src="www/kaust.png">  FASTQ/BAM report    
   
 
 output:
