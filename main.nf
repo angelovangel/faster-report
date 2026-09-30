@@ -125,8 +125,8 @@ process FASTER_REPORT {
     def filetypeOpt    = filetype ? "-y '${filetype}'" : ''
 
     def user        = params.user     ? "-u '${params.user}'" : ''
-    def saveraw     = params.save_raw ? "-s TRUE" : ''
-    def simulate    = params.simgel   ? "-e TRUE" : ''
+    def saveraw     = params.save_raw ? "-s" : ''
+    def simulate    = params.simgel   ? "-e" : ''
     """
     # Bring the css into Nextflow's isolated working directory
     cp /temp/custom.css ./custom.css 2>/dev/null

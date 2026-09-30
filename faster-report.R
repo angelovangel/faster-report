@@ -36,12 +36,12 @@ option_list <- list(
   make_option(c('--mods', '-m'), help = 'Modifications', type = 'character', default = "-"),
   make_option(c('--filetype', '-y'), help = 'File type', type = 'character', default = "fastq"),
   make_option(c('--user', '-u'), help = 'User', type = 'character', default = NULL),
-  make_option(c('--save_raw', '-s'), help = 'save raw csv data used for plotting', type = 'logical', default = FALSE),
+  make_option(c('--save_raw', '-s'), help = 'save raw csv data used for plotting', action = 'store_true', default = FALSE),
   make_option(c('--subsample', '-x'), help = 'subsample reads for kmers calculation', type = 'double', default = 1.0),
   make_option(c('--outfile','-o'), help = 'name of output report file', type = 'character', default = 'faster-report.html'),
   make_option(c('--git_commit', '-g'), help = 'git commit hash to display in report', type = 'character', default = 'NA'),
-  make_option(c('--simulate_gel', '-e'), help = 'simulate gel electrophoresis', type = 'logical', default = FALSE),
-  make_option(c('--invert_gel', '-i'), help = 'invert gel to white background and dark DNA', type = 'logical', default = FALSE)
+  make_option(c('--simulate_gel', '-e'), help = 'simulate gel electrophoresis', action = 'store_true', default = FALSE),
+  make_option(c('--invert_gel', '-i'), help = 'invert gel to white background and dark DNA', action = 'store_true', default = FALSE)
 )
 
 opts <- parse_args(OptionParser(option_list = option_list))
