@@ -246,6 +246,22 @@ if (any(df$reads < 10)) {
   checkpoint <- TRUE
 }
 
+htmltools::div(
+  htmltools::tags$input(
+        type = "text",
+        placeholder = "Search...",
+        style = "padding: 0.25rem 0.5rem;",
+        oninput = "['table1', 'table2'].forEach(id => {
+          if (Reactable.getInstance(id)) Reactable.setSearch(id, this.value);
+        })"
+      ),
+    style = "margin-bottom: 0.75rem",
+    htmltools::tags$button(
+      'Download as CSV', onclick = "Reactable.downloadDataCSV(tableId = 'table1', filename = 'faster-report.csv')"
+    )
+    #htmltools::tags$select(id = 'custom-numbers', lapply(c('No formatting', 'Thousand separator', 'SI units'), htmltools::tags$option))
+  )
+  
 htmltools::tags$p(
   style = 'color: #7f8c8d;',
   'Table 1. FASTQ quality metrics'
@@ -253,23 +269,6 @@ htmltools::tags$p(
 
 # use reactable to enable sorting
 htmltools::tagList(
-  htmltools::div(
-    style = "margin-bottom: 0.75rem",
-    htmltools::tags$button(
-      'Download as CSV', onclick = "Reactable.downloadDataCSV(tableId = 'table1', filename = 'faster-report.csv')"
-    ),
-    htmltools::tags$input(
-        type = "text",
-        placeholder = "Search...",
-        style = "padding: 0.25rem 0.5rem;",
-        oninput = "Reactable.setSearch('table1', this.value)"
-        #oninput = "Reactable.setData('table1', {
-        #reads: ['1', '2', this.value]
-        #})"
-      )
-    #htmltools::tags$select(id = 'custom-numbers', lapply(c('No formatting', 'Thousand separator', 'SI units'), htmltools::tags$option))
-  ),
-  
   #htmltools::tags$hr("aria-hidden" = "true"),
   
   reactable::reactable(
@@ -278,9 +277,9 @@ htmltools::tagList(
     elementId = 'table1',
     fullWidth = T, 
     wrap = F, resizable = TRUE, bordered = TRUE,
-    #searchable = T,
+    defaultColDef = colDef(searchable = FALSE),
     columns = list(
-      file = colDef(name = "File", minWidth = 150, 
+      file = colDef(name = "File", minWidth = 150, searchable = TRUE,
         #html = TRUE,
         #cell = function(index) {
         #  as.character(bslib::tooltip(bsicons::bs_icon("info-circle"), 'test'))
@@ -635,16 +634,18 @@ tags$p(
 gc_df %>%
   dplyr::arrange(stringi::stri_rank(file, opts_collator = locale)) %>%
   reactable(
+    elementId = 'table2',
     fullWidth = T, 
     pagination = F,
     defaultColDef = colDef(
       html = T, 
       sortable = F, 
       filterable = F, 
+      searchable = F,
       #resizable = F, 
       vAlign = "bottom"),
     columns = list(
-     file = colDef(name = "File"),
+     file = colDef(name = "File", searchable = T, sortable = T),
      gc_content_dist = colDef(name = "GC content"),
      content_percycle = colDef(name = "Content per cycle"),
      qscore_dist = colDef(name = "Q-score", minWidth = 200),
@@ -653,7 +654,15 @@ gc_df %>%
      base_yield_by_len = colDef(name = "Base yield by length", minWidth = 200),
      kmer_counts = colDef(name = "k-mer counts", minWidth = 200)
     )
-  )
+  ) %>%
+  htmlwidgets::onRender("
+    function(el, x) {
+      Reactable.onStateChange('table2', function(state) {
+        // wait for React to finish re-rendering, then redraw sparklines
+        setTimeout(function() { HTMLWidgets.staticRender(); }, 50);
+      });
+    }
+  ")
 
 ```
 
