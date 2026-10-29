@@ -27,6 +27,7 @@ nextflow run main.nf --reads /path/to/fastq_directory/ [options]
 | `--outdir` | Output directory to save the report | `output` |
 | `--outfile` | Name of the output HTML file | `faster-report.html` |
 | `--save_raw` | Save raw CSV tables used for plotting (`true`/`false`) | `false` |
+| `--context` | ONT only: detect the library kit (LSK/NBD/RAD/RBK/MAB adapters and ONT barcodes) at the start of ~5000 reads and add a "Read context" section: `short` (only the kit found) or `long` (with tables, logo and per-file view; also plain `--context`) | off |
 
 ---
 

@@ -41,7 +41,8 @@ option_list <- list(
   make_option(c('--outfile','-o'), help = 'name of output report file', type = 'character', default = 'faster-report.html'),
   make_option(c('--git_commit', '-g'), help = 'git commit hash to display in report', type = 'character', default = 'NA'),
   make_option(c('--simulate_gel', '-e'), help = 'simulate gel electrophoresis', action = 'store_true', default = FALSE),
-  make_option(c('--invert_gel', '-i'), help = 'invert gel to white background and dark DNA', action = 'store_true', default = FALSE)
+  make_option(c('--invert_gel', '-i'), help = 'invert gel to white background and dark DNA', action = 'store_true', default = FALSE),
+  make_option(c('--context', '-c'), help = "detect the library kit context at the read starts (ONT only): 'short' (kit found) or 'long' (with tables, logo and per-file view)", type = 'character', default = 'none')
 )
 
 opts <- parse_args(OptionParser(option_list = option_list))
@@ -115,7 +116,8 @@ rmarkdown::render(
     subsample     = opts$subsample,
     git_commit    = opts$git_commit,
     simulate_gel  = opts$simulate_gel,
-    invert_gel    = opts$invert_gel
+    invert_gel    = opts$invert_gel,
+    context       = opts$context
   )
 )
 

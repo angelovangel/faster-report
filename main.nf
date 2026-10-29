@@ -38,6 +38,9 @@ if (params.help) {
        --outdir        Directory where the output report is saved (default: 'output').
        --save_raw      Save raw CSV data used for plotting (logical, default: false).
        --simgel        Simulate gel electrophoresis (logical, default: false)
+       --context       Detect the library kit context (ONT adapters/barcodes) at the start of
+                       ~5000 reads (ONT only): 'short' (only the kit found) or 'long'
+                       (with tables, logo and per-file view; also plain --context)
 
      Metadata Override Options (will override values auto-detected from FASTQ/BAM headers):
        --flowcell      Flow cell ID
@@ -52,6 +55,10 @@ if (params.help) {
     ================================================================================
     """
     exit 0
+}
+
+if (params.context && !(params.context in [true, 'short', 'long'])) {
+    error "--context must be 'short' or 'long' (got '${params.context}')"
 }
 
 if (!params.reads) {
@@ -128,6 +135,7 @@ process FASTER_REPORT {
     def user        = params.user     ? "-u '${params.user}'" : ''
     def saveraw     = params.save_raw ? "-s" : ''
     def simulate    = params.simgel   ? "-e" : ''
+    def context     = params.context  ? "-c ${params.context == true ? 'long' : params.context}" : ''
     """
     # Bring the css into Nextflow's isolated working directory
     cp /temp/custom.css ./custom.css 2>/dev/null
@@ -148,6 +156,7 @@ process FASTER_REPORT {
         ${user} \\
         ${saveraw} \\
         ${simulate} \\
+        ${context} \\
         -x ${params.subsample} \\
         --git_commit ${git_commit} \\
         -o ${params.outfile}

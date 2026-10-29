@@ -74,6 +74,11 @@ params:
   label: "Invert gel (white background)"
   value: FALSE
   input: checkbox
+ context:
+  label: "Detect read context (ONT kit adapters/barcodes at the read starts)"
+  choices: ["none", "short", "long"]
+  value: "none"
+  input: select
 ---
 <style type="text/css">
 .main-container {
@@ -667,6 +672,32 @@ gc_df %>%
 ```
 
 
+
+```{r read_context, include=TRUE, results='asis', eval=params$context %in% c('short', 'long') && params$sequencer == 'Nanopore'}
+cat("<hr style='margin-top: 2rem; border-color: #ddd;'>\n")
+cat("<h3>Read context</h3>\n")
+context_html_path <- "read_context.html"
+context_script <- file.path(bin_base, "bin", "read-context.py")
+if (file.exists(context_script)) {
+  system2("python3", args = c(context_script, fastqfiles, "-o", context_html_path, "-n", 5000, "-t", numcores, "-m", params$context))
+
+  if (file.exists(context_html_path)) {
+    html_content <- paste(readLines(context_html_path, warn = FALSE), collapse = "\n")
+    print(htmltools::tagList(
+      htmltools::tags$iframe(
+        srcdoc = html_content,
+        width = "100%",
+        height = if (params$context == "short") "120px" else "900px",
+        style = "border:none;"
+      )
+    ))
+  } else {
+    cat("<p>Read context detection failed to produce output.</p>\n")
+  }
+} else {
+  cat("<p>Read context script not found.</p>\n")
+}
+```
 
 ```{r simulate_gel, include=TRUE, results='asis', eval=params$simulate_gel}
 cat("<hr style='margin-top: 2rem; border-color: #ddd;'>\n")
