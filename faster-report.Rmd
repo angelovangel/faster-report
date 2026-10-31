@@ -75,7 +75,7 @@ params:
   value: FALSE
   input: checkbox
  context:
-  label: "Detect read context (ONT kit adapters/barcodes at the read starts)"
+  label: "Detect read context (ONT: kit adapters/barcodes at the read starts; Illumina: adapter read-through and indexes)"
   choices: ["none", "short", "long"]
   value: "none"
   input: select
@@ -673,13 +673,14 @@ gc_df %>%
 
 
 
-```{r read_context, include=TRUE, results='asis', eval=params$context %in% c('short', 'long') && params$sequencer == 'Nanopore'}
+```{r read_context, include=TRUE, results='asis', eval=params$context %in% c('short', 'long') && params$sequencer %in% c('Nanopore', 'Illumina')}
 cat("<hr style='margin-top: 2rem; border-color: #ddd;'>\n")
 cat("<h3>Read context</h3>\n")
 context_html_path <- "read_context.html"
 context_script <- file.path(bin_base, "bin", "read-context.py")
 if (file.exists(context_script)) {
-  system2("python3", args = c(context_script, fastqfiles, "-o", context_html_path, "-n", 5000, "-t", numcores, "-m", params$context))
+  system2("python3", args = c(context_script, fastqfiles, "-o", context_html_path, "-n", 5000, "-t", numcores, "-m", params$context,
+                               "-p", if (params$sequencer == "Illumina") "illumina" else "ont"))
 
   if (file.exists(context_html_path)) {
     html_content <- paste(readLines(context_html_path, warn = FALSE), collapse = "\n")

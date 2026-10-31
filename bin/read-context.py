@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-read-context.py - which ONT library kit the read starts look like (adapters and barcodes still on the reads).
+read-context.py - which library kit/adapters are still on the reads.
 
-Looks for the known kit adapters (indels allowed, ~15% edits) in the first 160 nt of a sample of reads, spread
+ONT (-p ont, default): looks for the known kit adapters (indels allowed, ~15% edits) in the first 160 nt of a sample of reads, spread
 over all files. For barcoded kits it also calls the ONT barcode. The output is a self-contained HTML section for
 faster-report (shown in an iframe, like the gel simulation).
-Ported from `utag context` (https://github.com/angelovangel/utag); stdlib only.
+Illumina (-p illumina): looks for adapter read-through (TruSeq, Nextera, small RNA) anywhere in the reads and reads
+the indexes from the CASAVA 1.8+ read headers.
+ONT part ported from `utag context` (https://github.com/angelovangel/utag); stdlib only.
 
 Usage:
-    read-context.py reads1.fastq.gz reads2.fastq.gz -o read_context.html [-n 5000] [-t 4]
+    read-context.py reads1.fastq.gz reads2.fastq.gz -o read_context.html [-p ont|illumina] [-m short|long] [-n 5000] [-t 4]
 """
 
 import argparse, gzip, itertools, json, math, os, random, re, sys, time
@@ -275,11 +277,16 @@ def main():
     ap.add_argument("-t", "--threads", type=int, default=4, help="processes (default 4)")
     ap.add_argument("-m", "--mode", choices=["short", "long"], default="long",
                     help="short: only the kit (and ONT barcodes) found; long: also the tables, logo and per-file view (default)")
+    ap.add_argument("-p", "--platform", choices=["ont", "illumina"], default="ont",
+                    help="ont: kit adapters/barcodes at the read starts (default); illumina: adapter read-through and "
+                         "the indexes in the read headers")
     ap.add_argument("--json", help="also write the data as JSON")
     a = ap.parse_args()
 
     files = sorted(a.reads, key=lambda p: [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", label(p))])
     per = max(MIN_PER_FILE, math.ceil(a.n_reads / len(files)))
+    if a.platform == "illumina":
+        return illumina(a, files, per)
     with Pool(max(1, min(a.threads, len(files)))) as pool:
         calls = pool.map(scan_file, [(f, per) for f in files])
 
@@ -319,23 +326,136 @@ def main():
         R["file_rows"].append(row)
 
     if "kit" not in R:
-        R["verdict"] = ("no known ONT adapter at the read starts: the reads look trimmed (MinKNOW/Dorado remove "
-                        "adapters and barcodes by default) or the kit is unknown")
-    elif R["kit"] in ("SQK-RAD114", "SQK-RBK114"):
+        R["verdict"] = ("no known ONT adapter at the read starts: the reads are trimmed")
+    elif R["kit"] == "SQK-RBK114":
+        R["verdict"] = "rapid kit: the transposase adapter and barcodes are still on the reads (untrimmed); inserts start at random positions"
+    elif R["kit"] == "SQK-RAD114":              # no barcode in this kit
         R["verdict"] = "rapid kit: the transposase adapter is still on the reads (untrimmed); inserts start at random positions"
-    else:
+    elif R["kit"] in ("SQK-NBD114", "SQK-MAB114"):
+        R["verdict"] = "the kit adapter and barcodes are still on the reads (untrimmed)"
+    else:                                       # SQK-LSK114: no barcode
         R["verdict"] = "the kit adapter is still on the reads (untrimmed)"
 
     print(f"read context: {R['n']} reads from {len(files)} files; " +
           ", ".join(f"{k} {100 * f:.1f}%" for k, _, f in R["kits"]) + f" -> {R.get('kit', 'none')}", file=sys.stderr)
+    write(a, R, ONT_BODY, ONT_JS)
+
+
+def write(a, R, body, js):
     if a.json:
         with open(a.json, "w") as fh:
             json.dump(R, fh)
     with open(a.out, "w") as fh:
-        fh.write(HTML.replace("__DATA__", json.dumps(R, separators=(",", ":")).replace("</", "<\\/")))
+        fh.write(page(body, js).replace("__DATA__", json.dumps(R, separators=(",", ":")).replace("</", "<\\/")))
 
 
-HTML = r"""<!doctype html>
+# ---------------------------------------------------------------- illumina --
+# Illumina reads start with the insert; the adapter shows up at the 3' end when the insert is shorter than the read
+# (read-through). family -> (library, adapter start shared by read 1 and read 2, edits allowed)
+ILLUMINA_ADAPTERS = {"TruSeq": ("TruSeq / ligation (Illumina DNA PCR-Free, Stranded mRNA, TruSeq)", "AGATCGGAAGAGC", 1),
+                     "Nextera": ("Nextera / tagmentation (Illumina DNA Prep, Nextera XT)", "CTGTCTCTTATACACATCT", 2),
+                     "small RNA": ("TruSeq Small RNA 3' adapter", "TGGAATTCTCGG", 1)}
+ILLUMINA_FOUND = 0.005                   # share of reads with an adapter for it to count as found
+INDEX_RE = re.compile(r"\s\d:[YN]:\d+:([ACGTN]+(?:\+[ACGTN]+)?)\s*$")   # CASAVA 1.8+: 1:N:0:ATCACG+TTAGGC
+
+
+def read_records(path):
+    """(header, sequence) of each read in a fastq/fasta(.gz) file"""
+    op = gzip.open if path.endswith(".gz") else open
+    with op(path, "rt") as fh:
+        head = fh.readline()
+        if head.startswith(">"):
+            seq = []
+            for ln in fh:
+                if ln.startswith(">"):
+                    yield head, "".join(seq).upper()
+                    head, seq = ln, []
+                else:
+                    seq.append(ln.strip())
+            yield head, "".join(seq).upper()
+            return
+        while head:
+            yield head, fh.readline().strip().upper()
+            fh.readline(); fh.readline()
+            head = fh.readline()
+
+
+def read_through(x):
+    """(adapter family, read position where it starts) of the first known adapter in read x, or (None, None)"""
+    hits = [(h[0], fam) for fam, (_, sq, k) in ILLUMINA_ADAPTERS.items() for h in [locate(sq, x, k)] if h]
+    return (min(hits)[1], min(hits)[0]) if hits else (None, None)
+
+
+def scan_illumina(job):
+    """adapter calls [(family, position, read length)] and index Counter for the first `take` reads of a file"""
+    path, take = job
+    calls, idx = [], Counter()
+    for head, seq in itertools.islice(read_records(path), take):
+        if not seq:
+            continue
+        m = INDEX_RE.search(head)
+        idx[m.group(1) if m else None] += 1
+        calls.append((*read_through(seq), len(seq)))
+    return calls, idx
+
+
+def illumina(a, files, per):
+    with Pool(max(1, min(a.threads, len(files)))) as pool:
+        res = pool.map(scan_illumina, [(f, per) for f in files])
+    calls = [x for cl, _ in res for x in cl]
+    n = max(1, len(calls))
+    c = Counter(fam for fam, _, _ in calls)
+    lens = sorted(ln for _, _, ln in calls)
+    L = lens[-1] if lens else 0
+    step = max(1, math.ceil(L / 100))
+    curves = {}                          # family -> % of all reads with the adapter at or before each cycle bin
+    for fam in ILLUMINA_ADAPTERS:
+        at, run, cur = Counter(p // step for f, p, _ in calls if f == fam), 0, []
+        for b in range(L // step + 1):
+            run += at[b]
+            cur.append(round(run / n, 5))
+        curves[fam] = cur
+    R = {"platform": "illumina", "mode": a.mode, "started": time.strftime("%Y-%m-%d %H:%M"), "n": len(calls),
+         "files": len(files), "per_file": per, "found": ILLUMINA_FOUND, "readlen": lens[len(lens) // 2] if lens else 0, "maxlen": L, "step": step,
+         "adapters": [[fam, lib, sq, c[fam] / n] for fam, (lib, sq, _) in ILLUMINA_ADAPTERS.items()] + [["none", "", "", c[None] / n]],
+         "curves": curves}
+    fam, m = max(((f, c[f]) for f in ILLUMINA_ADAPTERS), key=lambda kv: kv[1])
+    if m >= ILLUMINA_FOUND * n:
+        R["kit"] = fam
+        R["also"] = [f for f in ILLUMINA_ADAPTERS if f != fam and c[f] >= ILLUMINA_FOUND * n]
+        pos = sorted(p for f, p, _ in calls if f == fam)
+        R["median_pos"] = pos[len(pos) // 2]
+        R["verdict"] = f"the {fam} adapter is still on the reads with inserts shorter than the read (untrimmed)"
+    else:
+        R["verdict"] = "no known Illumina adapter in the reads: the inserts are longer than the reads, or the reads are trimmed"
+
+    idx = sum((i for _, i in res), Counter())
+    ni = max(1, sum(idx.values()))
+    named = [(k, v) for k, v in idx.most_common() if k]
+    if named:
+        kind = lambda k: ("dual " if "+" in k else "single ") + "+".join(str(len(x)) for x in k.split("+"))
+        kinds = Counter()
+        for k, v in named:
+            kinds[kind(k)] += v
+        R["index"] = {"kinds": [[k, v / ni] for k, v in kinds.most_common() if v >= 0.01 * ni],
+                      "top": [[k, v / ni] for k, v in named[:20]], "distinct": len(named), "none": idx[None] / ni}
+
+    R["file_rows"] = []
+    for f, (cl, ix) in zip(files, res):
+        fc, fn = Counter(fam for fam, _, _ in cl), max(1, len(cl))
+        row = {"file": label(f), "n": len(cl), "shares": {fam: fc[fam] / fn for fam in ILLUMINA_ADAPTERS}}
+        top = [(k, v) for k, v in ix.most_common() if k]
+        if top:
+            row["idx"] = [top[0][0], top[0][1] / max(1, sum(ix.values()))]
+        R["file_rows"].append(row)
+
+    print(f"read context (illumina): {R['n']} reads from {len(files)} files; " +
+          ", ".join(f"{k} {100 * f:.2f}%" for k, _, _, f in R["adapters"]) + f" -> {R.get('kit', 'none')}; index " +
+          (", ".join(k for k, _ in R["index"]["kinds"]) if named else "none"), file=sys.stderr)
+    write(a, R, ILLUMINA_BODY, ILLUMINA_JS)
+
+
+HEAD = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Read context</title>
 <style>
@@ -375,29 +495,32 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--ink)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 svg text{fill:var(--dim);font-size:10px}
 </style></head><body>
-<main>
+"""
+
+ONT_BODY = r"""<main>
   <section class="panel"><h2>Library kit at the read starts</h2><div id="verdict"></div>
     <div class="two long"><div id="kits"></div><div id="bcs"></div></div><div class="long" id="logo"></div></section>
   <section class="panel long"><h2>Per file</h2><div class="legend" id="fleg"></div><div class="scroll" id="files"></div></section>
 </main>
-<script>
-const R = __DATA__;
+"""
+
+COMMON_JS = r"""const R = __DATA__;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt = n => Number(n).toLocaleString("en-US");
 const pf = f => (100 * f).toFixed(1) + "%";
 const qv = ["--q0", "--q1", "--q2", "--q3", "--q4", "--q5"];
-const heat = f => { const i = f <= 0 ? 0 : Math.min(5, 1 + Math.floor(f * 5)); return `<span class="cell" style="background:var(${qv[i]});${i >= 4 ? "color:#fff" : ""}">${pf(f)}</span>`; };
+const heat = (f, lo = 0.0005) => { const i = f < lo ? 0 : Math.min(5, 1 + Math.floor(f * 5)); return `<span class="cell" style="background:var(${qv[i]});${i >= 4 ? "color:#fff" : ""}">${pf(f)}</span>`; };
 const cseq = s => [...s].map(c => `<span style="color:var(--${"ACGT".includes(c) ? c : "muted"})">${esc(c)}</span>`).join("");
-const KC = {"SQK-NBD114": "#2a78d6", "SQK-LSK114": "#8fbcef", "SQK-MAB114": "#e08a00", "SQK-RBK114": "#8e57c4", "SQK-RAD114": "#cba6ea", "none": "#dcdbd5"};
+"""
+
+ONT_JS = r"""const KC = {"SQK-NBD114": "#2a78d6", "SQK-LSK114": "#8fbcef", "SQK-MAB114": "#e08a00", "SQK-RBK114": "#8e57c4", "SQK-RAD114": "#cba6ea", "none": "#dcdbd5"};
 
 // ---- verdict + kit table
-$("verdict").innerHTML = (R.kit ? `<p class="verdict"><span class="ok">✓</span> read starts look like <b>${esc(R.kit)}</b> (${pf(R.kits.find(k => k[0] === R.kit)[2])} of reads)</p>`
+$("verdict").innerHTML = (R.kit ? `<p class="verdict"><span class="ok">✓</span> read starts look like <b>${esc(R.kit)}</b>` +
+                                  (R.mode === "short" ? "" : ` (${pf(R.kits.find(k => k[0] === R.kit)[2])} of reads)`) + `</p>`
                                 : `<p class="verdict no">no known ONT kit at the read starts</p>`) +
-  `<div class="note${R.kit ? "" : " warn"}">${esc(R.verdict)}</div>` +
-  (R.mode === "short" ? (R.barcodes ? `<div class="note">ONT barcodes: ${R.barcodes.slice(0, 12).map(([b, f]) => `<b>${esc(b)}</b> ${pf(f)}`).join(", ")}` +
-    `${R.barcodes.length > 12 ? `, … (${R.barcodes.length} found)` : ""}</div>` : "") +
-    `<div class="note">${fmt(R.n)} reads from ${fmt(R.files)} files, first ${R.window} nt; known adapters within ~15% edits</div>` : "");
+  `<div class="note${R.kit ? "" : " warn"}">${esc(R.verdict)}</div>`;
 if (R.mode === "short") document.querySelectorAll(".long").forEach(e => e.style.display = "none");
 $("kits").innerHTML = `<h3>kit adapters in the first ${R.window} nt</h3><table><tr><th class="l">kit</th><th class="l">read start</th><th>reads</th></tr>` +
   R.kits.map(([k, lay, f]) => `<tr class="${k === R.kit ? "pick" : ""}"><td class="l"><b>${esc(k)}</b></td><td class="l">${esc(lay || "no known adapter")}</td><td>${heat(f)}</td></tr>`).join("") +
@@ -476,11 +599,67 @@ $("files").innerHTML = `<table><tr><th class="l">file</th><th>reads</th><th clas
       (R.barcodes ? `<td class="l rv" title="${fmt(r.bc_n || 0)} reads checked">${r.bc && r.bc.length ? r.bc.map(([b, f]) => `<b>${esc(b)}</b> <em>${pf(f)}</em>`).join(", ") : `<em>–</em>`}</td>` : "") + `</tr>`; }).join("") +
   `</table>` + (R.barcodes ? `<div class="note">ONT barcode: up to ${fmt(Math.max(...R.file_rows.map(r => r.bc_n || 0)))} ${esc(R.kit)} reads checked per file (hover for the count)</div>` : "");
 
-// grow the iframe (faster-report shows this page in one) to the content
+"""
+
+ILLUMINA_BODY = r"""<main>
+  <section class="panel"><h2>Adapter read-through</h2><div id="verdict"></div>
+    <div class="long" id="ads"></div><div class="long" id="curve"></div></section>
+  <section class="panel long"><h2>Indexes in the read headers</h2><div id="idx"></div></section>
+  <section class="panel long"><h2>Per file</h2><div class="scroll" id="files"></div></section>
+</main>
+"""
+
+ILLUMINA_JS = r"""const AC = {"TruSeq": "#2a78d6", "Nextera": "#e08a00", "small RNA": "#8e57c4", "none": "#dcdbd5"};
+const fams = R.adapters.filter(r => r[0] !== "none").map(r => r[0]);
+
+// ---- verdict + adapter table
+$("verdict").innerHTML = (R.kit ? `<p class="verdict"><span class="ok">✓</span> adapter read-through: <b>${esc(R.kit)}</b>${R.also.length ? ` (also ${R.also.map(esc).join(", ")})` : ""}` +
+                                  (R.mode === "short" ? "" : ` (${pf(R.adapters.find(r => r[0] === R.kit)[3])} of reads, median start at cycle ${fmt(R.median_pos + 1)})`) + `</p>`
+                                : `<p class="verdict">no adapter read-through</p>`) +
+  `<div class="note">${esc(R.verdict)}</div>`;
+if (R.mode === "short") document.querySelectorAll(".long").forEach(e => e.style.display = "none");
+$("ads").innerHTML = `<h3>adapters anywhere in the read</h3><table><tr><th class="l">adapter</th><th class="l">library</th><th class="l">sequence</th><th>reads</th></tr>` +
+  R.adapters.map(([k, lib, sq, f]) => `<tr class="${k === R.kit ? "pick" : ""}"><td class="l"><b>${esc(k)}</b></td><td class="l">${esc(lib || "no known adapter")}</td>` +
+    `<td class="l seq">${cseq(sq)}</td><td>${heat(f, k === "none" ? 0.0005 : R.found)}</td></tr>`).join("") +
+  `</table><div class="note">${fmt(R.n)} reads from ${fmt(R.files)} files (up to ${fmt(R.per_file)} per file), read length ${fmt(R.readlen)} (median); adapter start within 1-2 edits</div>`;
+
+// ---- cumulative adapter content by cycle (as in FastQC): % of reads with the adapter starting at or before a cycle
+{ const W = 560, H = 160, l = 44, b = 22, t = 8, r = 120, top = Math.max(0.01, ...fams.map(f => R.curves[f].at(-1) || 0));
+  const ymax = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1].find(v => v >= top) || 1, nb = R.curves[fams[0]].length;
+  const x = i => l + (nb > 1 ? i / (nb - 1) : 0) * (W - l - r), y = v => t + (1 - v / ymax) * (H - t - b);
+  let h = `<svg viewBox="0 0 ${W} ${H}" width="${W}" style="max-width:100%;height:auto" role="img" aria-label="adapter content by cycle">`;
+  for (const f of [0, .5, 1]) h += `<line x1="${l}" x2="${W - r}" y1="${y(f * ymax)}" y2="${y(f * ymax)}" stroke="var(--grid)"/><text x="${l - 4}" y="${y(f * ymax) + 3}" text-anchor="end">${pf(f * ymax)}</text>`;
+  for (const f of [0, .25, .5, .75, 1]) { const i = Math.round(f * (nb - 1)); h += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${fmt(i * R.step + 1)}</text>`; }
+  fams.forEach(f => { const c = R.curves[f], last = c.at(-1) || 0;
+    h += `<polyline fill="none" stroke="${AC[f]}" stroke-width="2" points="${c.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}"><title>${esc(f)}</title></polyline>`;
+    h += `<text x="${W - r + 4}" y="${y(last) + 3}" style="fill:${AC[f]};font-weight:600">${esc(f)} ${pf(last)}</text>`; });
+  $("curve").innerHTML = `<h3>adapter content by cycle</h3>${h}</svg><div class="note">% of reads with the adapter starting at or before the cycle; ` +
+    `an early rise means many inserts shorter than the read</div>`; }
+
+// ---- indexes
+const I = R.index, iseq = s => s.split("+").map(cseq).join(`<span style="color:var(--muted)"> + </span>`);
+$("idx").innerHTML = !I ? `<div class="note">no index in the read headers (CASAVA 1.8+ format, e.g. <span class="seq">1:N:0:ATCACG+TTAGGC</span>)</div>` :
+  `<p class="verdict">${I.kinds.map(([k, f]) => `<b>${esc(k)}</b> nt` + (I.kinds.length > 1 ? ` <span style="color:var(--muted)">${pf(f)}</span>` : "")).join(", ")} · ${fmt(I.distinct)} distinct indexes</p>` +
+  `<table><tr><th class="l">index</th><th class="l" colspan="2">reads</th></tr>` +
+  I.top.filter(([, f]) => f >= 0.005).slice(0, 10).map(([k, f]) => `<tr><td class="l seq">${iseq(k)}</td><td class="l"><div class="pbar"><i style="width:${(100 * f / I.top[0][1]).toFixed(2)}%"></i></div></td><td class="l rv"><b>${pf(f)}</b></td></tr>`).join("") +
+  `</table><div class="note">indexes in ≥ 0.5% of reads (up to 10), as read by the sequencer; bar = share of the top index` +
+  `${I.none > 0 ? `; ${pf(I.none)} of reads without an index in the header` : ""}</div>`;
+
+// ---- per file
+$("files").innerHTML = `<table><tr><th class="l">file</th><th>reads</th>${fams.map(f => `<th>${esc(f)}</th>`).join("")}${I ? `<th class="l">index</th>` : ""}</tr>` +
+  R.file_rows.map(r => `<tr><td class="l">${esc(r.file)}</td><td>${fmt(r.n)}</td>${fams.map(f => `<td>${heat(r.shares[f] || 0, R.found)}</td>`).join("")}` +
+    (I ? `<td class="l rv">${r.idx ? `<span class="seq">${iseq(r.idx[0])}</span> <em>${pf(r.idx[1])}</em>` : `<em>–</em>`}</td>` : "") + `</tr>`).join("") +
+  `</table><div class="note">% of reads with the adapter (shaded from ${pf(R.found)}, below that it is noise); index = most common index in the file's read headers</div>`;
+"""
+
+FIT_JS = r"""// grow the iframe (faster-report shows this page in one) to the content
 function fit() { try { const f = window.frameElement; if (f) f.style.height = Math.ceil(document.querySelector("main").getBoundingClientRect().bottom + 4) + "px"; } catch (e) {} }
 addEventListener("load", fit); addEventListener("resize", fit); fit();
-</script></body></html>
 """
+
+
+def page(body, js):
+    return HEAD + body + "<script>\n" + COMMON_JS + js + FIT_JS + "</script></body></html>\n"
 
 if __name__ == "__main__":
     main()

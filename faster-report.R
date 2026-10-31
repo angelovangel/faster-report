@@ -42,7 +42,7 @@ option_list <- list(
   make_option(c('--git_commit', '-g'), help = 'git commit hash to display in report', type = 'character', default = 'NA'),
   make_option(c('--simulate_gel', '-e'), help = 'simulate gel electrophoresis', action = 'store_true', default = FALSE),
   make_option(c('--invert_gel', '-i'), help = 'invert gel to white background and dark DNA', action = 'store_true', default = FALSE),
-  make_option(c('--context', '-c'), help = "detect the library kit context at the read starts (ONT only): 'short' (kit found) or 'long' (with tables, logo and per-file view)", type = 'character', default = 'none')
+  make_option(c('--context', '-c'), help = "detect the library context (ONT: kit adapters/barcodes at the read starts; Illumina: adapter read-through and indexes): 'short' (only what was found) or 'long' (with tables, plots and per-file view)", type = 'character', default = 'none')
 )
 
 opts <- parse_args(OptionParser(option_list = option_list))

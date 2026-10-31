@@ -38,9 +38,11 @@ if (params.help) {
        --outdir        Directory where the output report is saved (default: 'output').
        --save_raw      Save raw CSV data used for plotting (logical, default: false).
        --simgel        Simulate gel electrophoresis (logical, default: false)
-       --context       Detect the library kit context (ONT adapters/barcodes) at the start of
-                       ~5000 reads (ONT only): 'short' (only the kit found) or 'long'
-                       (with tables, logo and per-file view; also plain --context)
+       --context       Detect the library context in ~5000 reads (ONT and Illumina):
+                       ONT: kit adapters/barcodes at the read starts; Illumina: adapter
+                       read-through and the indexes in the read headers.
+                       'short' (only what was found) or 'long' (with tables, plots and
+                       per-file view; also plain --context)
 
      Metadata Override Options (will override values auto-detected from FASTQ/BAM headers):
        --flowcell      Flow cell ID
