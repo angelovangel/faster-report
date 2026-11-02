@@ -147,9 +147,14 @@ stats_headers <- c(
 )
 
 stats_command <- function(x) {
-  system2(command = "faster",
+  out <- suppressWarnings(system2(command = "faster",
           args = c("-ts", x),
-          stdout = TRUE)
+          stdout = TRUE))
+  # faster panics on empty files (0 reads) and returns nothing, so emit a zero row
+  if (length(out) == 0) {
+    out <- paste(c(x, rep(0, length(stats_headers) - 1)), collapse = "\t")
+  }
+  out
 }
 
 # nduplex_command <- function(x) {

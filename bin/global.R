@@ -8,10 +8,17 @@ faster_gc <- function(x, saveraw = FALSE) {
   require(data.table)
 
   samplename <- basename(tools::file_path_sans_ext(x, compression = T))
-  density_obj <- system2("faster2", args = c("--gc", x), stdout = TRUE) %>%
-    as.numeric() %>%
+  gc <- suppressWarnings(system2("faster2", args = c("--gc", x), stdout = TRUE)) %>% as.numeric()
+  gc <- gc[!is.na(gc)]
+  if (length(gc) == 0) {
+    # empty file, flat density
+    density_obj <- list(x = seq(0, 1, length.out = 100), y = rep(0, 100))
+  } else {
     # actually use density() here, not hist(). It returns a density list object with x and y, x is fixed from 1 to 100
-    density(from = 0, to = 1, n = 100, na.rm = TRUE) # n is the number of equally spaced points at which the density is to be estimated.
+    # n is the number of equally spaced points at which the density is to be estimated.
+    # bandwidth cannot be selected automatically with < 2 reads, so fix it
+    density_obj <- density(gc, from = 0, to = 1, n = 100, bw = if (length(gc) < 2) 0.02 else "nrd0")
+  }
 
   if(isTRUE(saveraw)) {
     #if(!dir.exists("rawdata")) {dir.create("rawdata")}
@@ -88,7 +95,11 @@ duplevel <- function(x, saveraw = FALSE) {
   
   samplename <- basename(tools::file_path_sans_ext(x, compression = T))
   #faster -l x | sort -n | head -n 1
-  faster_out <- system2("faster2", args = c("-t", x), stdout = TRUE)
+  faster_out <- suppressWarnings(system2("faster2", args = c("-t", x), stdout = TRUE))
+  # faster2 returns nothing for empty files (0 reads)
+  if (length(faster_out) < 2) {
+    return(data.frame(occ = numeric(0), count = numeric(0), percent = numeric(0)))
+  }
   max_len <- read.table(text = faster_out, header = T)$max_len
   if (max_len > 610) {
     stop(paste("max read length is", max_len, "and you selected Illumina, which can be maximum 610"))
@@ -114,7 +125,12 @@ content_percycle <- function(x, saveraw = FALSE) {
   
   samplename <- basename(tools::file_path_sans_ext(x, compression = T))
   
-  faster_out <- system2("faster2", args = c("-t", x), stdout = TRUE)
+  faster_out <- suppressWarnings(system2("faster2", args = c("-t", x), stdout = TRUE))
+  # faster2 returns nothing for empty files (0 reads)
+  if (length(faster_out) < 2) {
+    return(data.frame(cycle = numeric(0), a = numeric(0), t = numeric(0), g = numeric(0),
+                      c = numeric(0), n = numeric(0), mean_phred = numeric(0)))
+  }
   max_len <- read.table(text = faster_out, header = T)$max_len
   if (max_len > 610) {
     stop(paste("max read length is", max_len, "and you selected Illumina, which can be maximum 610"))
